@@ -1,0 +1,440 @@
+import { defineStore } from 'pinia'
+import { ref, computed, watch, onUnmounted } from 'vue'
+// import { authManager } from '@/utils/auth/auth-manager'  // 注释掉，使用admin的认证系统
+import type { UserToken, LoginForm } from '@/types/auth.types'
+
+export const useAuthStore = defineStore('auth', () => {
+  const encryptedToken = ref<string | null>(null)
+  const userInfo = ref<UserToken | null>(null)
+  const isLoading = ref(false)
+  const currentRoleId = ref<number | null>(null)
+  const isRefreshing = ref(false)
+  let refreshTimer: number | null = null
+
+  const isLoggedIn = computed(() => !!encryptedToken.value && !!userInfo.value)
+  const currentAccountId = computed(() => userInfo.value?.account_id || userInfo.value?.user_id)
+  const authToken = computed(() => userInfo.value?.access_token || null)
+
+  /**
+   * 从localStorage恢复登录状态
+   */
+  function checkLoginStatus(): boolean {
+    const savedToken = localStorage.getItem('auth_token')
+    console.log('🔍 检查登录状态，localStorage中是否有token:', !!savedToken)
+
+    if (savedToken) {
+      try {
+        const tokenData = atob(savedToken)
+        const tokenInfo = JSON.parse(tokenData) as UserToken
+        console.log('📝 Token解析成功，包含字段:', Object.keys(tokenInfo))
+
+        const requiredFields = ['access_token', 'account_id', 'mac_key']
+        const missingFields = requiredFields.filter(field => !(field in tokenInfo))
+
+        if (missingFields.length === 0) {
+          console.log('✅ Token包含所有必需字段')
+          encryptedToken.value = savedToken
+          userInfo.value = tokenInfo
+          currentRoleId.value = tokenInfo.current_role_id || null
+
+          // 检查token是否需要刷新
+          let remainingTime = 0
+          if (tokenInfo.expires_at) {
+            let expiresAtTimestamp: number | undefined
+
+            if (typeof tokenInfo.expires_at === 'string') {
+              expiresAtTimestamp = Math.floor(new Date(tokenInfo.expires_at).getTime() / 1000)
+              console.log('📅 Token过期时间(字符串):', tokenInfo.expires_at, '-> 时间戳:', expiresAtTimestamp)
+            } else if (typeof tokenInfo.expires_at === 'number') {
+              expiresAtTimestamp = tokenInfo.expires_at
+              console.log('📅 Token过期时间(数字):', expiresAtTimestamp)
+            } else {
+              console.warn('⚠️ 无法识别的过期时间格式:', tokenInfo.expires_at)
+              expiresAtTimestamp = undefined
+            }
+
+            if (expiresAtTimestamp && !isNaN(expiresAtTimestamp)) {
+              remainingTime = Math.max(0, expiresAtTimestamp - Math.floor(Date.now() / 1000))
+              console.log('📅 Token过期时间:', new Date(expiresAtTimestamp * 1000).toLocaleString())
+            } else {
+              console.warn('⚠️ 无效的过期时间，使用永不过期策略')
+              remainingTime = Number.MAX_SAFE_INTEGER
+            }
+          } else {
+            remainingTime = Number.MAX_SAFE_INTEGER
+          }
+
+          console.log('⏰ Token剩余时间:', remainingTime, '秒')
+
+          if (remainingTime > 0) {
+            console.log('✅ Token有效，设置自动刷新')
+            setupTokenRefresh() // 静默模式，不显示重复日志
+            return true
+          } else {
+            console.log('❌ Token已过期，清除登录状态')
+            localStorage.removeItem('auth_token')
+            return false
+          }
+        } else {
+          console.log('❌ Token缺少必需字段:', missingFields)
+          // 对于测试token，允许更宽松的验证
+          if (tokenInfo.is_test_token && tokenInfo.access_token) {
+            console.log('🧪 检测到测试token，使用宽松验证')
+            encryptedToken.value = savedToken
+            userInfo.value = tokenInfo
+            currentRoleId.value = tokenInfo.current_role_id || null
+            return true
+          }
+          localStorage.removeItem('auth_token')
+        }
+      } catch (error) {
+        console.error('❌ Token解析失败:', error)
+        console.log('🧹 清除损坏的token数据')
+        localStorage.removeItem('auth_token')
+      }
+    } else {
+      console.log('ℹ️ localStorage中没有找到token')
+    }
+    return false
+  }
+
+  /**
+   * 用户登录
+   */
+  async function login(loginForm: LoginForm): Promise<{ success: boolean; error?: string }> {
+    isLoading.value = true
+    try {
+      // 开发模式下使用测试登录
+      if (import.meta.env.DEV && loginForm.username === 'admin' && loginForm.password === '123456') {
+        console.log('🧪 开发模式测试登录')
+
+        const testToken: UserToken = {
+          access_token: 'test-access-token-' + Date.now(),
+          account_id: 'test-account-id',
+          user_id: 'test-user-id',
+          mac_key: 'test-mac-key',
+          expires_at: Math.floor(Date.now() / 1000) + 3600, // 1小时后过期
+          is_test_token: true
+        }
+
+        const encryptedTokenValue = btoa(JSON.stringify(testToken))
+        encryptedToken.value = encryptedTokenValue
+        userInfo.value = testToken
+
+        localStorage.setItem('auth_token', encryptedTokenValue)
+        console.log('💾 测试Token已保存到localStorage')
+
+        return { success: true }
+      }
+
+      // 生产模式使用真实认证
+      const provider = authManager.getCurrentProvider()
+      if (!provider) {
+        throw new Error('没有可用的认证提供者')
+      }
+
+      const result = await provider.login(loginForm)
+
+      if (result.success && result.token) {
+        console.log('🎉 登录成功，准备保存token')
+        console.log('📋 Token数据字段:', Object.keys(result.token))
+
+        const encryptedTokenValue = btoa(JSON.stringify(result.token))
+        encryptedToken.value = encryptedTokenValue
+        userInfo.value = result.token
+
+        // 保存到localStorage，重命名为 auth_token
+        localStorage.setItem('auth_token', encryptedTokenValue)
+        console.log('💾 Token已保存到localStorage (auth_token)')
+
+        // 设置token自动刷新，显示详细日志
+        setupTokenRefresh(true)
+
+        console.log('✅ 登录成功')
+        return { success: true }
+      } else {
+        console.error('❌ 登录失败:', result.error || '登录失败')
+        return { success: false, error: result.error || '登录失败' }
+      }
+    } catch (error) {
+      console.error('登录异常:', error)
+      console.error('❌ 登录异常，请重试:', error)
+      return { success: false, error: '登录异常' }
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /**
+   * 切换角色
+   */
+  function switchRole(roleId: number): void {
+    if (userInfo.value) {
+      console.log('🔄 切换角色，从', currentRoleId.value, '到', roleId)
+
+      currentRoleId.value = roleId
+
+      const updatedUserInfo = {
+        ...userInfo.value,
+        current_role_id: roleId
+      }
+
+      userInfo.value = updatedUserInfo
+
+      // 重新加密并保存到localStorage
+      const encryptedTokenValue = btoa(JSON.stringify(updatedUserInfo))
+      encryptedToken.value = encryptedTokenValue
+      localStorage.setItem('auth_token', encryptedTokenValue)
+      console.log('💾 角色切换后重新保存token')
+
+      console.log('✅ 角色切换成功')
+    }
+  }
+
+  /**
+   * 测试登录
+   */
+  async function testLogin(testToken: string): Promise<boolean> {
+    isLoading.value = true
+    try {
+      const tokenData = atob(testToken)
+      const tokenInfo = JSON.parse(tokenData) as UserToken
+
+      if (!tokenInfo.is_test_token) {
+        throw new Error('无效的测试token')
+      }
+
+      encryptedToken.value = testToken
+      userInfo.value = tokenInfo
+
+      localStorage.setItem('auth_token', testToken)
+
+      if (!tokenInfo.is_test_token && tokenInfo.expires_at) {
+        setupTokenRefresh()
+      }
+
+      return true
+    } catch (error) {
+      console.error('测试登录失败:', error)
+      throw error
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /**
+   * 刷新token
+   */
+  async function refreshToken(): Promise<boolean> {
+    if (isRefreshing.value || !userInfo.value?.refresh_token) {
+      return false
+    }
+
+    isRefreshing.value = true
+    try {
+      console.log('开始刷新token...')
+
+      const provider = authManager.getCurrentProvider()
+      if (!provider || !provider.refreshToken) {
+        console.error('当前认证提供者不支持token刷新')
+        return false
+      }
+
+      const result = await provider.refreshToken(userInfo.value)
+
+      if (result.success && result.token) {
+        const newTokenInfo = result.token
+        const encryptedTokenValue = btoa(JSON.stringify(newTokenInfo))
+        encryptedToken.value = encryptedTokenValue
+        userInfo.value = newTokenInfo
+
+        localStorage.setItem('auth_token', encryptedTokenValue)
+        console.log('Token刷新成功')
+
+        setupTokenRefresh()
+        return true
+      } else {
+        console.error('Token刷新失败:', result.error)
+        return false
+      }
+    } catch (error) {
+      console.error('Token刷新异常:', error)
+      return false
+    } finally {
+      isRefreshing.value = false
+    }
+  }
+
+  /**
+   * 计算token剩余时间（秒）
+   */
+  function getTokenRemainingTime(): number {
+    if (!userInfo.value?.expires_at) {
+      console.log('ℹ️ 没有过期时间或userInfo不可用，返回0')
+      return 0
+    }
+
+    const now = Math.floor(Date.now() / 1000)
+    let expiresAtTimestamp: number
+
+    if (typeof userInfo.value.expires_at === 'string') {
+      expiresAtTimestamp = Math.floor(new Date(userInfo.value.expires_at).getTime() / 1000)
+      console.log('📅 计算时过期时间(字符串):', userInfo.value.expires_at, '-> 时间戳:', expiresAtTimestamp)
+    } else if (typeof userInfo.value.expires_at === 'number') {
+      expiresAtTimestamp = userInfo.value.expires_at
+      console.log('📅 计算时过期时间(数字):', expiresAtTimestamp)
+    } else {
+      console.warn('⚠️ 过期时间格式无效:', userInfo.value.expires_at)
+      return 0
+    }
+
+    if (isNaN(expiresAtTimestamp)) {
+      console.warn('⚠️ 转换后的过期时间无效:', expiresAtTimestamp)
+      return 0
+    }
+
+    const remaining = Math.max(0, expiresAtTimestamp - now)
+    console.log('⏰ 计算Token剩余时间:', remaining, '秒，当前时间:', now, '过期时间:', expiresAtTimestamp)
+    return remaining
+  }
+
+  /**
+   * 设置token自动刷新
+   */
+  function setupTokenRefresh(showLog: boolean = false): void {
+    if (refreshTimer) {
+      clearTimeout(refreshTimer)
+      refreshTimer = null
+    }
+
+    const remainingTime = getTokenRemainingTime()
+    if (remainingTime <= 0) {
+      if (showLog) console.log('Token已过期，需要重新登录')
+      logout()
+      return
+    }
+
+    // 在token过期前5分钟刷新（最少60秒前刷新）
+    const refreshBeforeExpiry = Math.min(300, Math.max(60, remainingTime * 0.1))
+    const refreshTime = (remainingTime - refreshBeforeExpiry) * 1000
+
+    if (refreshTime > 0) {
+      if (showLog) {
+        console.log(`Token将在${remainingTime}秒后过期，${Math.floor(refreshTime / 1000)}秒后自动刷新`)
+      }
+
+      refreshTimer = setTimeout(async () => {
+        console.log('自动刷新token...')
+        const success = await refreshToken()
+        if (!success) {
+          console.log('自动刷新失败，用户需要重新登录')
+          console.warn('⚠️ 登录状态即将过期，请重新登录')
+          logout()
+        }
+      }, refreshTime)
+    } else {
+      if (showLog) console.log('Token即将过期，立即刷新')
+      refreshToken()
+    }
+  }
+
+  /**
+   * 清除刷新定时器
+   */
+  function clearTokenRefresh(): void {
+    if (refreshTimer) {
+      clearTimeout(refreshTimer)
+      refreshTimer = null
+    }
+  }
+
+  /**
+   * 验证并修复token数据
+   */
+  function validateAndRepairToken(): boolean {
+    const savedToken = localStorage.getItem('auth_token')
+    if (!savedToken || !encryptedToken.value || !userInfo.value) {
+      return false
+    }
+
+    try {
+      const storedTokenData = JSON.parse(atob(savedToken))
+      const memoryTokenData = JSON.parse(atob(encryptedToken.value))
+
+      const keyFields = ['access_token', 'account_id', 'user_id']
+      const isConsistent = keyFields.every(field =>
+        storedTokenData[field] === memoryTokenData[field]
+      )
+
+      if (!isConsistent) {
+        console.warn('⚠️ 检测到token数据不一致，重新从localStorage加载')
+        return checkLoginStatus()
+      }
+
+      return true
+    } catch (error) {
+      console.error('❌ Token验证失败:', error)
+      return checkLoginStatus()
+    }
+  }
+
+  /**
+   * 用户登出
+   */
+  function logout(): void {
+    console.log('👋 用户登出')
+    clearTokenRefresh()
+    encryptedToken.value = null
+    userInfo.value = null
+    currentRoleId.value = null
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('redirect_after_login')
+    console.log('🧹 登出清理完成')
+    console.log('✅ 已退出登录')
+  }
+
+  // 监听用户信息变化，自动设置token刷新
+  watch(
+    () => userInfo.value,
+    (newUserInfo) => {
+      if (newUserInfo?.expires_at && !(newUserInfo as any)?.is_test_token) {
+        setupTokenRefresh()
+      } else if (!newUserInfo) {
+        clearTokenRefresh()
+      }
+    },
+    { immediate: false }
+  )
+
+  // 页面卸载时清除定时器
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', clearTokenRefresh)
+  }
+
+  onUnmounted(() => {
+    clearTokenRefresh()
+  })
+
+  return {
+    // 兼容原有接口
+    token: authToken,
+    userInfo: userInfo,
+    isLoading: isLoading,
+    isRefreshing: isRefreshing,
+    currentRoleId: currentRoleId,
+    isLoggedIn,
+    currentAccountId,
+    authToken,
+    // 新的认证方法
+    checkLoginStatus,
+    validateAndRepairToken,
+    login,
+    testLogin,
+    logout,
+    switchRole,
+    refreshToken,
+    getTokenRemainingTime,
+    setupTokenRefresh,
+    clearTokenRefresh
+  }
+})

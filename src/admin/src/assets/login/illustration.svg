@@ -1,0 +1,188 @@
+<svg viewBox="0 0 500 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F8FAFC"/>
+      <stop offset="100%" style="stop-color:#E2E8F0"/>
+    </linearGradient>
+
+    <linearGradient id="prismMainGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#22C55E"/>
+      <stop offset="35%" style="stop-color:#3B82F6"/>
+      <stop offset="70%" style="stop-color:#8B5CF6"/>
+      <stop offset="100%" style="stop-color:#EC4899"/>
+    </linearGradient>
+
+    <linearGradient id="glassGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:rgba(255,255,255,0.9)"/>
+      <stop offset="100%" style="stop-color:rgba(255,255,255,0.6)"/>
+    </linearGradient>
+
+    <!-- Light beams -->
+    <linearGradient id="lightIn" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" style="stop-color:#94A3B8;stop-opacity:0"/>
+      <stop offset="100%" style="stop-color:#64748B"/>
+    </linearGradient>
+
+    <linearGradient id="rayGreen" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#22C55E"/>
+      <stop offset="100%" style="stop-color:#22C55E;stop-opacity:0.2"/>
+    </linearGradient>
+
+    <linearGradient id="rayCyan" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#06B6D4"/>
+      <stop offset="100%" style="stop-color:#06B6D4;stop-opacity:0.2"/>
+    </linearGradient>
+
+    <linearGradient id="rayBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3B82F6"/>
+      <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:0.2"/>
+    </linearGradient>
+
+    <linearGradient id="rayPurple" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#8B5CF6"/>
+      <stop offset="100%" style="stop-color:#8B5CF6;stop-opacity:0.2"/>
+    </linearGradient>
+
+    <linearGradient id="rayPink" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#EC4899"/>
+      <stop offset="100%" style="stop-color:#EC4899;stop-opacity:0.2"/>
+    </linearGradient>
+
+    <linearGradient id="rayRed" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#EF4444"/>
+      <stop offset="100%" style="stop-color:#EF4444;stop-opacity:0.2"/>
+    </linearGradient>
+
+    <!-- Filters -->
+    <filter id="glowMain" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="glowBeam" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="blur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="25"/>
+    </filter>
+
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="rgba(0,0,0,0.1)"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="500" height="400" fill="url(#bgGrad)" rx="24"/>
+
+  <!-- Background glow effects -->
+  <ellipse cx="200" cy="200" rx="180" ry="120" fill="#22C55E" opacity="0.08" filter="url(#blur)"/>
+  <ellipse cx="350" cy="250" rx="120" ry="100" fill="#3B82F6" opacity="0.08" filter="url(#blur)"/>
+  <ellipse cx="150" cy="300" rx="100" ry="80" fill="#8B5CF6" opacity="0.06" filter="url(#blur)"/>
+
+  <!-- Decorative grid pattern -->
+  <g opacity="0.08" stroke="#64748B" stroke-width="0.5">
+    <line x1="0" y1="50" x2="500" y2="50"/>
+    <line x1="0" y1="100" x2="500" y2="100"/>
+    <line x1="0" y1="150" x2="500" y2="150"/>
+    <line x1="0" y1="200" x2="500" y2="200"/>
+    <line x1="0" y1="250" x2="500" y2="250"/>
+    <line x1="0" y1="300" x2="500" y2="300"/>
+    <line x1="0" y1="350" x2="500" y2="350"/>
+    <line x1="50" y1="0" x2="50" y2="400"/>
+    <line x1="100" y1="0" x2="100" y2="400"/>
+    <line x1="150" y1="0" x2="150" y2="400"/>
+    <line x1="200" y1="0" x2="200" y2="400"/>
+    <line x1="250" y1="0" x2="250" y2="400"/>
+    <line x1="300" y1="0" x2="300" y2="400"/>
+    <line x1="350" y1="0" x2="350" y2="400"/>
+    <line x1="400" y1="0" x2="400" y2="400"/>
+    <line x1="450" y1="0" x2="450" y2="400"/>
+  </g>
+
+  <!-- Incoming light beam -->
+  <line x1="30" y1="200" x2="150" y2="200" stroke="url(#lightIn)" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- Main Prism -->
+  <g filter="url(#glowMain)">
+    <polygon
+      points="200,80 320,320 80,320"
+      fill="url(#prismMainGrad)"
+      opacity="0.95"
+    />
+    <polygon
+      points="200,80 320,320 80,320"
+      fill="none"
+      stroke="rgba(255,255,255,0.6)"
+      stroke-width="2"
+    />
+  </g>
+
+  <!-- Inner prism reflections -->
+  <polygon
+    points="200,110 295,290 105,290"
+    fill="none"
+    stroke="rgba(255,255,255,0.3)"
+    stroke-width="1"
+  />
+  <polygon
+    points="200,140 270,260 130,260"
+    fill="none"
+    stroke="rgba(255,255,255,0.2)"
+    stroke-width="0.5"
+  />
+
+  <!-- Refracted spectrum beams -->
+  <g filter="url(#glowBeam)">
+    <line x1="280" y1="140" x2="470" y2="60" stroke="url(#rayGreen)" stroke-width="6" stroke-linecap="round"/>
+    <line x1="295" y1="170" x2="470" y2="120" stroke="url(#rayCyan)" stroke-width="6" stroke-linecap="round"/>
+    <line x1="305" y1="200" x2="470" y2="180" stroke="url(#rayBlue)" stroke-width="6" stroke-linecap="round"/>
+    <line x1="305" y1="230" x2="470" y2="240" stroke="url(#rayPurple)" stroke-width="6" stroke-linecap="round"/>
+    <line x1="295" y1="260" x2="470" y2="300" stroke="url(#rayPink)" stroke-width="6" stroke-linecap="round"/>
+    <line x1="280" y1="290" x2="470" y2="360" stroke="url(#rayRed)" stroke-width="6" stroke-linecap="round"/>
+  </g>
+
+  <!-- Floating particles -->
+  <g opacity="0.8">
+    <circle cx="380" cy="80" r="4" fill="#22C55E"/>
+    <circle cx="420" cy="100" r="2.5" fill="#22C55E"/>
+    <circle cx="400" cy="140" r="3" fill="#06B6D4"/>
+    <circle cx="440" cy="160" r="2.5" fill="#3B82F6"/>
+    <circle cx="420" cy="200" r="4" fill="#3B82F6"/>
+    <circle cx="450" cy="220" r="2.5" fill="#8B5CF6"/>
+    <circle cx="430" cy="260" r="3" fill="#8B5CF6"/>
+    <circle cx="410" cy="300" r="2.5" fill="#EC4899"/>
+    <circle cx="450" cy="330" r="4" fill="#EF4444"/>
+  </g>
+
+  <!-- Glassmorphism cards -->
+  <g filter="url(#shadow)">
+    <!-- Card 1 -->
+    <rect x="350" y="40" width="80" height="50" rx="10" fill="url(#glassGrad)" stroke="rgba(255,255,255,0.8)" stroke-width="1"/>
+    <rect x="360" y="52" width="40" height="4" rx="2" fill="#22C55E" opacity="0.8"/>
+    <rect x="360" y="62" width="55" height="3" rx="1.5" fill="#94A3B8" opacity="0.5"/>
+    <rect x="360" y="72" width="30" height="3" rx="1.5" fill="#94A3B8" opacity="0.4"/>
+
+    <!-- Card 2 -->
+    <rect x="380" y="310" width="90" height="60" rx="10" fill="url(#glassGrad)" stroke="rgba(255,255,255,0.8)" stroke-width="1"/>
+    <circle cx="400" cy="335" r="12" fill="#22C55E" opacity="0.2"/>
+    <circle cx="400" cy="335" r="8" fill="#22C55E" opacity="0.4"/>
+    <rect x="420" y="328" width="40" height="4" rx="2" fill="#3B82F6" opacity="0.8"/>
+    <rect x="420" y="338" width="35" height="3" rx="1.5" fill="#94A3B8" opacity="0.5"/>
+    <rect x="390" y="355" width="70" height="6" rx="3" fill="#22C55E" opacity="0.6"/>
+  </g>
+
+  <!-- Small decorative elements -->
+  <circle cx="60" cy="80" r="5" fill="#E2E8F0"/>
+  <circle cx="440" cy="380" r="4" fill="#E2E8F0"/>
+  <rect x="30" y="340" width="20" height="20" rx="4" fill="none" stroke="#CBD5E1" stroke-width="1.5"/>
+  <circle cx="70" cy="320" r="3" fill="#CBD5E1" opacity="0.6"/>
+</svg>

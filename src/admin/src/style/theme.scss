@@ -1,0 +1,102 @@
+/* ============================================
+   ui-ux-pro-max Design System Theme
+   Style: Glassmorphism
+   Colors: Primary #6366F1, Secondary #818CF8, CTA #10B981
+   Typography: Fira Code / Fira Sans
+   ============================================ */
+
+/* 亮白色 - 基于 Glassmorphism 风格 */
+html[data-theme="light"] {
+  --pure-theme-sub-menu-active-text: #1e1b4b;
+  --pure-theme-menu-bg: rgb(255 255 255 / 85%);
+  --pure-theme-menu-hover: rgb(99 102 241 / 8%);
+  --pure-theme-sub-menu-bg: rgb(255 255 255 / 90%);
+  --pure-theme-menu-text: #64748b;
+  --pure-theme-sidebar-logo: rgb(255 255 255 / 95%);
+  --pure-theme-menu-title-hover: #6366f1;
+  --pure-theme-menu-active-before: #6366f1;
+}
+
+/* 靛蓝主题 - ui-ux-pro-max Primary */
+html[data-theme="default"] {
+  --pure-theme-sub-menu-active-text: #fff;
+  --pure-theme-menu-bg: #1e1b4b;
+  --pure-theme-menu-hover: rgb(99 102 241 / 20%);
+  --pure-theme-sub-menu-bg: #151231;
+  --pure-theme-menu-text: rgb(255 255 255 / 70%);
+  --pure-theme-sidebar-logo: #252147;
+  --pure-theme-menu-title-hover: #fff;
+  --pure-theme-menu-active-before: #6366f1;
+}
+
+/* 深紫罗兰色 - Secondary 变体 */
+html[data-theme="saucePurple"] {
+  --pure-theme-sub-menu-active-text: #fff;
+  --pure-theme-menu-bg: #1a1333;
+  --pure-theme-menu-hover: rgb(129 140 248 / 15%);
+  --pure-theme-sub-menu-bg: #120e24;
+  --pure-theme-menu-text: rgb(255 255 255 / 65%);
+  --pure-theme-sidebar-logo: #221a40;
+  --pure-theme-menu-title-hover: #fff;
+  --pure-theme-menu-active-before: #818cf8;
+}
+
+/* 翠绿色 - CTA 主题 */
+html[data-theme="pink"] {
+  --pure-theme-sub-menu-active-text: #fff;
+  --pure-theme-menu-bg: #0f2922;
+  --pure-theme-menu-hover: rgb(16 185 129 / 15%);
+  --pure-theme-sub-menu-bg: #0a1f19;
+  --pure-theme-menu-text: rgb(255 255 255 / 65%);
+  --pure-theme-sidebar-logo: #143830;
+  --pure-theme-menu-title-hover: #fff;
+  --pure-theme-menu-active-before: #10b981;
+}
+
+/* 深空蓝 */
+html[data-theme="dusk"] {
+  --pure-theme-sub-menu-active-text: #fff;
+  --pure-theme-menu-bg: #0f172a;
+  --pure-theme-menu-hover: rgb(99 102 241 / 15%);
+  --pure-theme-sub-menu-bg: #0b1120;
+  --pure-theme-menu-text: rgb(255 255 255 / 65%);
+  --pure-theme-sidebar-logo: #151d35;
+  --pure-theme-menu-title-hover: #fff;
+  --pure-theme-menu-active-before: #6366f1;
+}
+
+/* 暗夜紫 */
+html[data-theme="volcano"] {
+  --pure-theme-sub-menu-active-text: #fff;
+  --pure-theme-menu-bg: #18122b;
+  --pure-theme-menu-hover: rgb(129 140 248 / 15%);
+  --pure-theme-sub-menu-bg: #110d20;
+  --pure-theme-menu-text: rgb(255 255 255 / 65%);
+  --pure-theme-sidebar-logo: #201838;
+  --pure-theme-menu-title-hover: #fff;
+  --pure-theme-menu-active-before: #818cf8;
+}
+
+/* 青碧色 */
+html[data-theme="mingQing"] {
+  --pure-theme-sub-menu-active-text: #fff;
+  --pure-theme-menu-bg: #042f2e;
+  --pure-theme-menu-hover: rgb(20 184 166 / 15%);
+  --pure-theme-sub-menu-bg: #022322;
+  --pure-theme-menu-title-hover: #fff;
+  --pure-theme-sidebar-logo: #064040;
+  --pure-theme-menu-text: rgb(255 255 255 / 65%);
+  --pure-theme-menu-active-before: #14b8a6;
+}
+
+/* 森林绿 */
+html[data-theme="auroraGreen"] {
+  --pure-theme-sub-menu-active-text: #fff;
+  --pure-theme-menu-bg: #0f2418;
+  --pure-theme-menu-hover: rgb(34 197 94 / 15%);
+  --pure-theme-sub-menu-bg: #0a1a11;
+  --pure-theme-menu-text: rgb(255 255 255 / 65%);
+  --pure-theme-sidebar-logo: #143020;
+  --pure-theme-menu-title-hover: #fff;
+  --pure-theme-menu-active-before: #22c55e;
+}

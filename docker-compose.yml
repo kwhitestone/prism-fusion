@@ -1,0 +1,18 @@
+# Prism Fusion 本地开发/调试编排（builtin 认证）
+# 使用方式: docker compose up -d
+
+services:
+  prism-fusion:
+    build: .
+    container_name: prism-fusion
+    restart: unless-stopped
+    ports:
+      - "${GATEWAY_PORT:-3180}:${GATEWAY_PORT:-3180}"
+    environment:
+      GATEWAY_PORT: "${GATEWAY_PORT:-3180}"
+      DB_HOST: "${DB_HOST:-}"
+      DB_PORT: "${DB_PORT:-3306}"
+      DB_NAME: "${DB_NAME:-prism_fusion}"
+      DB_USER: "${DB_USER:-root}"
+      DB_PASSWORD: "${DB_PASSWORD:-}"
+      UC_GATEWAY_URL: "${UC_GATEWAY_URL:-}"

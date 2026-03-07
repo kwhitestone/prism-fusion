@@ -1,0 +1,9 @@
+/references_ignore
+.env
+/.claude/settings.local.json
+/src/server/log
+/src/server/*.db
+.env
+__debug_bin*
+/references_ignore
+*.exe

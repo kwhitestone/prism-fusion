@@ -1,0 +1,34 @@
+<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="prismGradFav" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#22C55E"/>
+      <stop offset="50%" style="stop-color:#3B82F6"/>
+      <stop offset="100%" style="stop-color:#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="beamGreenFav" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#22C55E"/>
+      <stop offset="100%" style="stop-color:#22C55E;stop-opacity:0.3"/>
+    </linearGradient>
+    <linearGradient id="beamBlueFav" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6"/>
+      <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:0.3"/>
+    </linearGradient>
+    <linearGradient id="beamPurpleFav" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8B5CF6"/>
+      <stop offset="100%" style="stop-color:#8B5CF6;stop-opacity:0.3"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="32" height="32" rx="6" fill="#0F172A"/>
+
+  <!-- Main Prism -->
+  <polygon points="16,5 26,25 6,25" fill="url(#prismGradFav)" opacity="0.95"/>
+  <polygon points="16,5 26,25 6,25" fill="none" stroke="rgba(248,250,252,0.3)" stroke-width="0.5"/>
+
+  <!-- Light beams -->
+  <line x1="2" y1="16" x2="9" y2="16" stroke="rgba(248,250,252,0.5)" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="23" y1="12" x2="30" y2="8" stroke="url(#beamGreenFav)" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="24" y1="17" x2="30" y2="17" stroke="url(#beamBlueFav)" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="23" y1="22" x2="30" y2="26" stroke="url(#beamPurpleFav)" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

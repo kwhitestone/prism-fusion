@@ -1,0 +1,71 @@
+<svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient for the prism -->
+    <linearGradient id="prismGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#22C55E"/>
+      <stop offset="50%" style="stop-color:#3B82F6"/>
+      <stop offset="100%" style="stop-color:#8B5CF6"/>
+    </linearGradient>
+
+    <!-- Light beam gradients -->
+    <linearGradient id="beamIn" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" style="stop-color:#F8FAFC;stop-opacity:0"/>
+      <stop offset="100%" style="stop-color:#F8FAFC;stop-opacity:1"/>
+    </linearGradient>
+
+    <linearGradient id="beamGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#22C55E"/>
+      <stop offset="100%" style="stop-color:#22C55E;stop-opacity:0.3"/>
+    </linearGradient>
+
+    <linearGradient id="beamBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6"/>
+      <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:0.3"/>
+    </linearGradient>
+
+    <linearGradient id="beamPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8B5CF6"/>
+      <stop offset="100%" style="stop-color:#8B5CF6;stop-opacity:0.3"/>
+    </linearGradient>
+
+    <!-- Glow filter -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Incoming light beam -->
+  <line x1="20" y1="100" x2="70" y2="100" stroke="url(#beamIn)" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Main Prism Triangle -->
+  <polygon
+    points="100,35 150,145 50,145"
+    fill="url(#prismGradient)"
+    stroke="#F8FAFC"
+    stroke-width="2"
+    filter="url(#glow)"
+    opacity="0.95"
+  />
+
+  <!-- Inner prism reflection -->
+  <polygon
+    points="100,50 135,130 65,130"
+    fill="none"
+    stroke="rgba(248,250,252,0.3)"
+    stroke-width="1"
+  />
+
+  <!-- Refracted light beams -->
+  <line x1="140" y1="90" x2="180" y2="60" stroke="url(#beamGreen)" stroke-width="3" stroke-linecap="round" filter="url(#glow)"/>
+  <line x1="145" y1="105" x2="185" y2="105" stroke="url(#beamBlue)" stroke-width="3" stroke-linecap="round" filter="url(#glow)"/>
+  <line x1="140" y1="120" x2="180" y2="150" stroke="url(#beamPurple)" stroke-width="3" stroke-linecap="round" filter="url(#glow)"/>
+
+  <!-- Small decorative elements -->
+  <circle cx="185" cy="55" r="4" fill="#22C55E" opacity="0.8"/>
+  <circle cx="190" cy="105" r="4" fill="#3B82F6" opacity="0.8"/>
+  <circle cx="185" cy="155" r="4" fill="#8B5CF6" opacity="0.8"/>
+</svg>

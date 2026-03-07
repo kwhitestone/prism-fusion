@@ -1,0 +1,96 @@
+# ==================================================
+# Docker构建忽略文件 - 优化构建上下文和速度
+# ==================================================
+
+# Git相关文件
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# Docker相关文件
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+
+# 文档和说明文件
+README*.md
+CHANGELOG*.md
+LICENSE
+docs/
+*.md
+
+# IDE和编辑器文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统生成的文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node.js相关
+src/admin/node_modules/
+src/admin/npm-debug.log*
+src/admin/yarn-debug.log*
+src/admin/yarn-error.log*
+src/admin/dist/
+src/admin/.cache/
+src/admin/coverage/
+
+# Go相关
+src/server/vendor/
+src/server/*.exe
+src/server/*.exe~
+src/server/*.dll
+src/server/*.so
+src/server/*.dylib
+src/server/*.test
+src/server/*.out
+src/server/go.work
+src/server/go.work.sum
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+*.tmp
+*.temp
+tmp/
+temp/
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 配置文件（可能包含敏感信息）
+.env
+.env.local
+.env.*.local
+config.local.*
+
+# 测试覆盖率报告
+coverage/
+*.cover
+*.coverprofile
+
+# 压缩文件
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+
+# 构建产物
+build/
+dist/
+*.o
+*.a

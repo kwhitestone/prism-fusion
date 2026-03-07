@@ -1,0 +1,101 @@
+@use "theme";
+@use "transition";
+@use "element-plus";
+@use "sidebar";
+@use "dark";
+
+/* ============================================
+   ui-ux-pro-max Design System - Global Styles
+   Style: Glassmorphism
+   ============================================ */
+
+/* 自定义全局 CssVar */
+:root {
+  /* 左侧菜单展开、收起动画时长 */
+  --pure-transition-duration: 0.3s;
+
+  /* 常用border-color 需要时可取用 */
+  --pure-border-color: #e2e8f0;
+
+  /* switch关闭状态下的color 需要时可取用 */
+  --pure-switch-off-color: #94a3b8;
+
+  /** 主题色 - ui-ux-pro-max */
+  --pure-theme-sub-menu-active-text: initial;
+  --pure-theme-menu-bg: none;
+  --pure-theme-menu-hover: none;
+  --pure-theme-sub-menu-bg: transparent;
+  --pure-theme-menu-text: initial;
+  --pure-theme-sidebar-logo: none;
+  --pure-theme-menu-title-hover: initial;
+  --pure-theme-menu-active-before: transparent;
+}
+
+/* 灰色模式 */
+.html-grey {
+  filter: grayscale(100%);
+}
+
+/* 色弱模式 */
+.html-weakness {
+  filter: invert(80%);
+}
+
+/* ============================================
+   ui-ux-pro-max: Clean White Page Containers
+   所有页面容器统一样式
+   ============================================ */
+
+/* 通用页面容器样式 */
+.main-content {
+  background: #fff !important;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 24px rgb(30 27 75 / 6%);
+}
+
+/* 针对各个页面容器 */
+.dashboard-container,
+.error-container {
+  min-height: 100%;
+}
+
+/* 页面内的 el-card 样式增强 */
+.main-content .el-card,
+.dashboard-container .el-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgb(30 27 75 / 4%);
+}
+
+/* 页面标题样式 */
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h1,
+.page-header h2 {
+  margin: 0 0 8px;
+  font-family:
+    "Fira Sans",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  font-weight: 600;
+  color: #1e1b4b;
+}
+
+.page-header h1 {
+  font-size: 28px;
+}
+
+.page-header h2 {
+  font-size: 24px;
+}
+
+.page-header p {
+  margin: 0;
+  font-size: 14px;
+  color: #64748b;
+}

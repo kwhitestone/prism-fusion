@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
+  <defs>
+    <linearGradient id="prismGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#22C55E"/>
+      <stop offset="50%" style="stop-color:#3B82F6"/>
+      <stop offset="100%" style="stop-color:#8B5CF6"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- 三棱镜 -->
+  <polygon points="40,10 70,65 10,65" fill="url(#prismGrad)" stroke="#F8FAFC" stroke-width="1.5" filter="url(#glow)" opacity="0.95"/>
+  <polygon points="40,18 62,58 18,58" fill="none" stroke="#F8FAFC" stroke-width="0.8" opacity="0.3"/>
+  <!-- 入射光 -->
+  <line x1="5" y1="40" x2="28" y2="40" stroke="#F8FAFC" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <!-- 折射光束 -->
+  <line x1="55" y1="35" x2="75" y2="22" stroke="#22C55E" stroke-width="2" stroke-linecap="round" filter="url(#glow)"/>
+  <line x1="58" y1="42" x2="78" y2="42" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" filter="url(#glow)"/>
+  <line x1="55" y1="49" x2="75" y2="62" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round" filter="url(#glow)"/>
+  <!-- 光点 -->
+  <circle cx="75" cy="22" r="2.5" fill="#22C55E" opacity="0.9"/>
+  <circle cx="78" cy="42" r="2.5" fill="#3B82F6" opacity="0.9"/>
+  <circle cx="75" cy="62" r="2.5" fill="#8B5CF6" opacity="0.9"/>
+</svg>

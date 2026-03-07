@@ -1,0 +1,297 @@
+/* Prism Fusion Design System */
+/* Style: Glassmorphism Light Tech */
+/* Colors: Primary #F8FAFC, Secondary #E2E8F0, CTA #22C55E, Background #FFFFFF, Text #1E293B */
+/* Typography: Fira Sans / Fira Code */
+
+@import url("https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap");
+
+.wave {
+  position: fixed;
+  height: 100%;
+  width: 100%;
+  left: 0;
+  bottom: 0;
+  z-index: -1;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f8fafc 100%);
+}
+
+/* Animated background pattern */
+.wave::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    radial-gradient(
+      circle at 20% 80%,
+      rgba(34, 197, 94, 0.12) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 20%,
+      rgba(59, 130, 246, 0.12) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 40% 40%,
+      rgba(139, 92, 246, 0.08) 0%,
+      transparent 40%
+    );
+  pointer-events: none;
+}
+
+/* Grid pattern overlay */
+.wave::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    linear-gradient(rgba(30, 41, 59, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 41, 59, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+}
+
+.login-container {
+  width: 100vw;
+  height: 100vh;
+  max-width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 0;
+  font-family:
+    "Fira Sans",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+.img {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+}
+
+.img svg {
+  width: 100%;
+  max-width: 500px;
+  height: auto;
+  filter: drop-shadow(0 25px 50px rgba(0, 0, 0, 0.1));
+}
+
+.login-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.login-form {
+  width: 100%;
+  max-width: 420px;
+  padding: 48px 40px;
+  /* Glassmorphism effect - Light theme */
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(30, 41, 59, 0.08);
+  border-radius: 24px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+}
+
+.avatar {
+  width: 100%;
+  max-width: 280px;
+  height: auto;
+  margin: 0 auto 32px;
+  display: block;
+}
+
+.login-form h2 {
+  text-transform: none;
+  margin: 0 0 36px 0;
+  color: #1e293b;
+  font-family: "Fira Sans", sans-serif;
+  font-weight: 600;
+  font-size: 1.25rem;
+  text-align: center;
+  letter-spacing: -0.01em;
+  opacity: 0.9;
+}
+
+/* Form inputs - Light Glassmorphism style */
+.login-form :deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(30, 41, 59, 0.12);
+  border-radius: 12px;
+  box-shadow: none;
+  transition: all 0.2s ease;
+}
+
+.login-form :deep(.el-input__wrapper:hover) {
+  border-color: rgba(30, 41, 59, 0.2);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.login-form :deep(.el-input__wrapper.is-focus) {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+  background: rgba(255, 255, 255, 1);
+}
+
+.login-form :deep(.el-input__inner) {
+  color: #1e293b;
+  font-family: "Fira Sans", sans-serif;
+}
+
+.login-form :deep(.el-input__inner::placeholder) {
+  color: #94a3b8;
+}
+
+.login-form :deep(.el-input__prefix) {
+  color: #94a3b8;
+}
+
+.login-form :deep(.el-input__wrapper.is-focus) .el-input__prefix {
+  color: #22c55e;
+}
+
+/* Primary Button - CTA Green */
+.login-form :deep(.el-button--primary) {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border: none;
+  border-radius: 12px;
+  font-family: "Fira Sans", sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  height: 48px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.3);
+}
+
+.login-form :deep(.el-button--primary:hover) {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+}
+
+.login-form :deep(.el-button--primary:active) {
+  transform: translateY(0);
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.3);
+}
+
+.login-form :deep(.el-button--primary.is-loading) {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  opacity: 0.8;
+}
+
+.login-form :deep(.el-button--primary.is-disabled) {
+  background: #e2e8f0;
+  color: #94a3b8;
+  box-shadow: none;
+}
+
+/* Form item spacing */
+.login-form :deep(.el-form-item) {
+  margin-bottom: 20px;
+}
+
+/* Theme switch styling for light background */
+:deep(.el-switch) {
+  --el-switch-off-color: #e2e8f0;
+}
+
+/* Checkbox and link colors for light theme */
+.login-form :deep(.el-checkbox__label) {
+  color: #64748b;
+}
+
+.login-form :deep(.el-link) {
+  color: #22c55e;
+}
+
+.login-form :deep(.el-link:hover) {
+  color: #16a34a;
+}
+
+/* Responsive design */
+@media screen and (max-width: 1180px) {
+  .login-container {
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
+
+  .login-form {
+    max-width: 380px;
+    padding: 40px 32px;
+  }
+
+  .login-form h2 {
+    font-size: 1.125rem;
+    margin-bottom: 28px;
+  }
+
+  .avatar {
+    max-width: 240px;
+  }
+}
+
+@media screen and (max-width: 968px) {
+  .wave {
+    display: block;
+  }
+
+  .img {
+    display: none;
+  }
+
+  .login-container {
+    grid-template-columns: 1fr;
+    place-items: center;
+  }
+
+  .login-box {
+    width: 100%;
+    max-width: 480px;
+    padding: 1rem;
+  }
+
+  .login-form {
+    width: 100%;
+    max-width: 400px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .login-form {
+    padding: 32px 24px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.85);
+  }
+
+  .avatar {
+    max-width: 200px;
+  }
+
+  .login-form h2 {
+    font-size: 1rem;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .login-form :deep(.el-button--primary:hover) {
+    transform: none;
+  }
+}

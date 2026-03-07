@@ -1,0 +1,61 @@
+# 系统配置
+system:
+  env: 'local'  # 环境：public线上环境 local开发环境
+  addr: 3180     # 服务监听端口
+
+# JWT签名（auth.provider=builtin 时使用）
+jwt:
+  signing-key: 'change-me-in-production'
+  expires-time: '7d'   # 过期时间
+  buffer-time: '1d'    # 缓冲时间
+  issuer: 'Prism-Fusion' # 签发者
+
+# 认证配置
+# provider 由注册的插件决定，框架内置支持 builtin
+# 业务项目可通过插件扩展其他 provider（如 oauth）
+auth:
+  provider: 'builtin'
+
+# 权限控制配置
+# provider 由注册的插件决定，框架内置支持 builtin
+# 业务项目可通过插件扩展其他 provider（如 casbin）
+rbac:
+  provider: 'builtin'
+
+# Zap日志配置
+zap:
+  level: 'info'                # 日志级别
+  prefix: '[PRISM]'      # 日志前缀
+  format: 'console'            # 输出格式
+  director: 'log'              # 日志文件夹
+  encode-level: 'LowercaseColorLevelEncoder'  # 编码级别
+  stacktrace-key: 'stacktrace' # 栈名
+  max-age: 0      # 日志留存时间
+  show-line: true # 显示行
+  log-in-console: true # 输出控制台
+
+# SQLite配置
+sqlite:
+  path: './prism_fusion.db'     # 数据库文件路径
+  max-idle-conns: 10           # 空闲连接数
+  max-open-conns: 100          # 最大连接数
+  log-mode: 'error'            # 日志模式
+  log-zap: false               # 是否使用zap日志
+
+# 验证码配置
+captcha:
+  key-long: 6           # 验证码长度
+  img-width: 240        # 验证码宽度
+  img-height: 80        # 验证码高度
+  open-captcha: 0       # 防爆破验证码开启此数 0代表每次登录都需要验证码
+  open-captcha-timeout: 3600  # 防爆破验证码超时时间
+
+# 跨域配置
+cors:
+  mode: 'strict-whitelist' # 跨域模式
+  whitelist:
+    - allow-origin: 'http://localhost:3188'
+      allow-methods: 'GET,POST,PUT,DELETE,OPTIONS'
+      allow-headers: 'Content-Type,AccessToken,X-CSRF-Token,Authorization,Token,X-Token,X-User-Id'
+      expose-headers: 'Content-Length,Access-Control-Allow-Origin,Access-Control-Allow-Headers,Content-Type'
+      allow-credentials: true

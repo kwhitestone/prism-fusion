@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/admin/public/favicon.svg" width="80" alt="Prism Fusion Logo" />
+  <img src="src/web/public/favicon.svg" width="80" alt="Prism Fusion Logo" />
 </p>
 
 <h1 align="center">Prism Fusion</h1>
@@ -119,7 +119,7 @@ go run main.go
 ### 前端
 
 ```bash
-cd src/admin
+cd src/web
 pnpm install
 pnpm dev
 ```
@@ -274,9 +274,9 @@ my-project/
 │   │   ├── go.mod
 │   │   ├── go.work                # 引用框架: use ../../prism-fusion/src/server
 │   │   └── main.go
-│   └── src/admin/                 # Vue 前端
+│   └── src/web/                 # Vue 前端
 │       ├── src/addons/            # 业务前端插件
-│       ├── pnpm-workspace.yaml    # 引用框架: ../../prism-fusion/src/admin
+│       ├── pnpm-workspace.yaml    # 引用框架: ../../prism-fusion/src/web
 │       ├── vite.config.ts         # alias @ → 框架 src
 │       └── package.json           # 依赖 "prism-fusion-admin": "workspace:*"
 ├── docker-compose.yaml

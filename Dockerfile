@@ -1,6 +1,6 @@
 # ==================================================
 # Prism Fusion - 生产环境多阶段构建
-# 集成 Go Gateway + Admin 前端
+# 集成 Go Gateway + Web 前端
 # ==================================================
 # 
 # 构建命令: docker build -t prism-fusion .
@@ -13,7 +13,7 @@ ARG REGISTRY=swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io
 # ========== 阶段1: 前端构建阶段 ==========
 FROM ${REGISTRY}/node:22.22.0-alpine3.23 AS frontend-builder
 
-WORKDIR /app/admin
+WORKDIR /app/web
 
 ENV ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ \
     SASS_BINARY_SITE=https://npmmirror.com/mirrors/node-sass/ \
@@ -26,10 +26,10 @@ RUN npm config set registry https://registry.npmmirror.com/ && \
     npm install -g pnpm && \
     pnpm config set registry https://registry.npmmirror.com/
 
-COPY src/admin/package.json src/admin/pnpm-lock.yaml ./
+COPY src/web/package.json src/web/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
-COPY src/admin/ .
+COPY src/web/ .
 
 RUN pnpm run build
 
@@ -93,7 +93,7 @@ RUN addgroup -S app && adduser -S app -G app && \
 # ========== 复制 Go 应用和前端资源 ==========
 COPY --from=backend-builder --chown=app:app /app/server/prism-fusion /app/
 COPY --from=backend-builder --chown=app:app /app/server/config.yaml /app/
-COPY --from=frontend-builder --chown=app:app /app/admin/dist/ /app/web/
+COPY --from=frontend-builder --chown=app:app /app/web/dist/ /app/web/
 
 # ========== 配置 Supervisor ==========
 COPY scripts/supervisord.conf /etc/supervisor/conf.d/supervisord.conf

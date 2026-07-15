@@ -9,7 +9,7 @@
 
 | 目录 | 说明 |
 |------|------|
-| `src/admin/` | Vue 3 前端，使用 pnpm |
+| `src/web/` | Vue 3 前端，使用 pnpm |
 | `src/server/` | Go 后端，使用 Gin + Huma |
 
 ## 后端规范 (Go)

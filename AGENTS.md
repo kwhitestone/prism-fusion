@@ -1,33 +1,51 @@
-# AI Agent 贡献规则
+# prism-fusion
 
-## 基本原则
+全栈框架：Go 后端 (Gin + Huma + GORM) + Vue 前端 (Vite + Element Plus)。
 
-- **禁止** 自行启动测试服务或运行 `go run`、`pnpm dev` 等命令
-- 修改代码前先理解现有结构，遵循已有模式
+## 构建
 
-## 项目结构
+```bash
+# 后端
+cd src/server && go build ./...
 
-| 目录 | 说明 |
-|------|------|
-| `src/web/` | Vue 3 前端，使用 pnpm |
-| `src/server/` | Go 后端，使用 Gin + Huma |
+# 前端
+cd src/web && pnpm install && pnpm build
+```
 
-## 后端规范 (Go)
+## 架构约束
 
-- API 路由放 `api/v1/{模块}/`，并在 `api/v1/enter.go` 注册
-- 业务逻辑放 `service/`，并在 `service/enter.go` 注册
-- 插件/扩展放 `addons/`，通过 `init()` 自动注册
-- 使用 `global.PRISM_LOG` 记录日志
-- 使用 `global.PRISM_DB` 操作数据库
+- 后端：插件化架构，所有功能通过 `plugin.Plugin` 接口 + `init()` 注册
+- 前端：插件化架构，`import.meta.glob` 自动发现 `addons/*/index.ts`
+- 业务项目通过 git submodule + go.work + pnpm workspace 引用本框架
+- 框架保持纯净：零业务逻辑，auth/RBAC 等都是可选 addon
+- `src/admin` 已改名为 `src/web`，禁止恢复旧名
 
-## 前端规范 (Vue)
+## 目录结构
 
-- 组件放 `src/components/`
-- 页面放 `src/views/`
-- API 调用放 `src/api/`
-- 状态管理放 `src/store/`
+```
+src/
+├── server/           # Go 后端
+│   ├── addons/       # 内置插件 (auth, rbac)
+│   ├── plugin/       # 插件系统核心 (接口 + 注册表)
+│   ├── core/         # 框架核心 (server, viper, zap)
+│   ├── global/       # 全局变量 (PRISM_DB, PRISM_LOG, PRISM_CONFIG)
+│   ├── initialize/   # 初始化 (Gorm, Router, Tables)
+│   └── config/       # 配置定义
+└── web/              # Vue 前端
+    ├── src/addons/   # 前端内置插件
+    ├── src/plugin/   # 插件系统核心 (loader, types)
+    └── src/core/     # 框架核心模块
+```
 
-## 代码风格
+## 修改规范
 
-- Go: 遵循 gofmt
-- Vue/TS: 遵循项目 ESLint 配置，前端代码修改后必须通过 `pnpm lint` 检查
+- 修改 `plugin/plugin.go` 的 Plugin 接口需要向后兼容（新方法加默认实现）
+- 修改 `global/global.go` 的全局变量需要评估对业务项目的影响
+- 前端 `plugin/types.ts` 的 PluginModule 接口变更需要向后兼容
+
+## 边界
+
+- **Always**: 框架改动后跑 `go build ./...` 和 `pnpm build` 验证
+- **Ask first**: 修改 Plugin 接口（影响所有业务项目）
+- **Never**: 禁止在框架里写业务逻辑
+- **Never**: 禁止把 src/web 改回 src/admin

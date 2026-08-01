@@ -1,10 +1,50 @@
-/* Prism Fusion Design System */
-/* Style: Glassmorphism Light Tech */
-/* Colors: Primary #F8FAFC, Secondary #E2E8F0, CTA #22C55E, Background #FFFFFF, Text #1E293B */
-/* Typography: Fira Sans / Fira Code */
+/* Prism Fusion Design System - Aurora */
+/* Style: Pure white + Indigo/Violet gradient accents */
+/* Colors: Primary #6366F1, Secondary #8B5CF6, Accent #A78BFA */
+/* Typography: Plus Jakarta Sans / JetBrains Mono */
 
-@import url("https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
 
+/* ============================================
+   Animations
+   ============================================ */
+@keyframes gradient-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes blob-float {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+}
+
+@keyframes bounce-in {
+  0% { opacity: 0; transform: scale(0.3) translateY(20px); }
+  50% { opacity: 1; transform: scale(1.05) translateY(-4px); }
+  70% { transform: scale(0.98) translateY(2px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================
+   Login Page - Pure white + indigo/violet
+   ============================================ */
 .wave {
   position: fixed;
   height: 100%;
@@ -12,49 +52,37 @@
   left: 0;
   bottom: 0;
   z-index: -1;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f8fafc 100%);
+  background: #ffffff;
+  overflow: hidden;
 }
 
-/* Animated background pattern */
+/* Animated background blobs - indigo/violet only */
 .wave::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image:
-    radial-gradient(
-      circle at 20% 80%,
-      rgba(34, 197, 94, 0.12) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      circle at 80% 20%,
-      rgba(59, 130, 246, 0.12) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      circle at 40% 40%,
-      rgba(139, 92, 246, 0.08) 0%,
-      transparent 40%
-    );
-  pointer-events: none;
+  top: -10%;
+  right: -5%;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: #818cf8;
+  filter: blur(100px);
+  opacity: 0.15;
+  animation: blob-float 20s ease-in-out infinite;
 }
 
-/* Grid pattern overlay */
 .wave::after {
   content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image:
-    linear-gradient(rgba(30, 41, 59, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(30, 41, 59, 0.03) 1px, transparent 1px);
-  background-size: 50px 50px;
-  pointer-events: none;
+  bottom: -10%;
+  left: -5%;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: #6366f1;
+  filter: blur(100px);
+  opacity: 0.12;
+  animation: blob-float 20s ease-in-out infinite reverse;
 }
 
 .login-container {
@@ -64,12 +92,36 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   padding: 0;
-  font-family:
-    "Fira Sans",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  position: relative;
+}
+
+.login-container::before {
+  content: "";
+  position: absolute;
+  top: 40%;
+  left: 30%;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: #a78bfa;
+  filter: blur(120px);
+  opacity: 0.08;
+  animation: blob-float 25s ease-in-out infinite;
+  animation-delay: -14s;
+  pointer-events: none;
+}
+
+/* Grid pattern overlay - very subtle indigo */
+.login-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(99, 102, 241, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99, 102, 241, 0.025) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
 }
 
 .img {
@@ -77,13 +129,15 @@
   justify-content: center;
   align-items: center;
   padding: 2rem;
+  position: relative;
+  z-index: 1;
 }
 
 .img svg {
   width: 100%;
   max-width: 500px;
   height: auto;
-  filter: drop-shadow(0 25px 50px rgba(0, 0, 0, 0.1));
+  filter: drop-shadow(0 25px 50px rgba(99, 102, 241, 0.15));
 }
 
 .login-box {
@@ -91,21 +145,32 @@
   align-items: center;
   justify-content: center;
   padding: 2rem;
+  position: relative;
+  z-index: 1;
 }
 
 .login-form {
   width: 100%;
   max-width: 420px;
   padding: 48px 40px;
-  /* Glassmorphism effect - Light theme */
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(30, 41, 59, 0.08);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 24px;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.08),
-    0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08), 0 0 80px rgba(99, 102, 241, 0.06);
+  animation: bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer sweep on form card */
+.login-form::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.03), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 4s linear infinite;
+  pointer-events: none;
 }
 
 .avatar {
@@ -119,40 +184,39 @@
 .login-form h2 {
   text-transform: none;
   margin: 0 0 36px 0;
-  color: #1e293b;
-  font-family: "Fira Sans", sans-serif;
-  font-weight: 600;
-  font-size: 1.25rem;
+  color: #0f172a;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 700;
+  font-size: 1.5rem;
   text-align: center;
-  letter-spacing: -0.01em;
-  opacity: 0.9;
+  letter-spacing: -0.02em;
+  position: relative;
+  z-index: 1;
 }
 
-/* Form inputs - Light Glassmorphism style */
+/* Form inputs - Pure white with indigo focus */
 .login-form :deep(.el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(30, 41, 59, 0.12);
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
   border-radius: 12px;
   box-shadow: none;
   transition: all 0.2s ease;
 }
 
 .login-form :deep(.el-input__wrapper:hover) {
-  border-color: rgba(30, 41, 59, 0.2);
-  background: rgba(255, 255, 255, 0.95);
+  border-color: #c7d2fe;
+  background: #ffffff;
 }
 
 .login-form :deep(.el-input__wrapper.is-focus) {
-  border-color: #22c55e;
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
-  background: rgba(255, 255, 255, 1);
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  background: #ffffff;
 }
 
 .login-form :deep(.el-input__inner) {
-  color: #1e293b;
-  font-family: "Fira Sans", sans-serif;
+  color: #0f172a;
+  font-family: "Plus Jakarta Sans", sans-serif;
 }
 
 .login-form :deep(.el-input__inner::placeholder) {
@@ -164,42 +228,56 @@
 }
 
 .login-form :deep(.el-input__wrapper.is-focus) .el-input__prefix {
-  color: #22c55e;
+  color: #6366f1;
 }
 
-/* Primary Button - CTA Green */
+/* Primary Button - Indigo/Violet gradient + shimmer */
 .login-form :deep(.el-button--primary) {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background-size: 200% 200%;
+  animation: gradient-flow 4s ease-in-out infinite;
   border: none;
   border-radius: 12px;
-  font-family: "Fira Sans", sans-serif;
+  font-family: "Plus Jakarta Sans", sans-serif;
   font-weight: 600;
   font-size: 1rem;
   height: 48px;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.3);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-form :deep(.el-button--primary::before) {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+  pointer-events: none;
 }
 
 .login-form :deep(.el-button--primary:hover) {
-  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+  box-shadow: 0 8px 28px rgba(99, 102, 241, 0.35);
 }
 
 .login-form :deep(.el-button--primary:active) {
   transform: translateY(0);
-  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.3);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.25);
 }
 
 .login-form :deep(.el-button--primary.is-loading) {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-  opacity: 0.8;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  opacity: 0.85;
 }
 
 .login-form :deep(.el-button--primary.is-disabled) {
   background: #e2e8f0;
   color: #94a3b8;
   box-shadow: none;
+  animation: none;
 }
 
 /* Form item spacing */
@@ -207,22 +285,28 @@
   margin-bottom: 20px;
 }
 
-/* Theme switch styling for light background */
+/* Theme switch styling */
 :deep(.el-switch) {
   --el-switch-off-color: #e2e8f0;
+  --el-switch-on-color: #6366f1;
 }
 
-/* Checkbox and link colors for light theme */
+/* Checkbox and link colors */
 .login-form :deep(.el-checkbox__label) {
   color: #64748b;
 }
 
+.login-form :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
+  background-color: #6366f1;
+  border-color: #6366f1;
+}
+
 .login-form :deep(.el-link) {
-  color: #22c55e;
+  color: #6366f1;
 }
 
 .login-form :deep(.el-link:hover) {
-  color: #16a34a;
+  color: #4f46e5;
 }
 
 /* Responsive design */
@@ -238,7 +322,7 @@
   }
 
   .login-form h2 {
-    font-size: 1.125rem;
+    font-size: 1.25rem;
     margin-bottom: 28px;
   }
 
@@ -277,7 +361,6 @@
   .login-form {
     padding: 32px 24px;
     border-radius: 20px;
-    background: rgba(255, 255, 255, 0.85);
   }
 
   .avatar {
@@ -285,12 +368,22 @@
   }
 
   .login-form h2 {
-    font-size: 1rem;
+    font-size: 1.125rem;
   }
 }
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
+  .login-form,
+  .login-form::before,
+  .login-form :deep(.el-button--primary),
+  .login-form :deep(.el-button--primary::before),
+  .wave::before,
+  .wave::after,
+  .login-container::before {
+    animation: none;
+  }
+
   .login-form :deep(.el-button--primary:hover) {
     transform: none;
   }

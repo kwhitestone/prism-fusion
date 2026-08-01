@@ -21,8 +21,8 @@ defineOptions({
               x2="100%"
               y2="100%"
             >
-              <stop offset="0%" style="stop-color: #22c55e" />
-              <stop offset="50%" style="stop-color: #3b82f6" />
+              <stop offset="0%" style="stop-color: #6366f1" />
+              <stop offset="50%" style="stop-color: #8b5cf6" />
               <stop offset="100%" style="stop-color: #8b5cf6" />
             </linearGradient>
             <linearGradient
@@ -42,16 +42,16 @@ defineOptions({
               />
             </linearGradient>
             <linearGradient
-              id="beamGreenWelcome"
+              id="beamIndigoWelcome"
               x1="0%"
               y1="0%"
               x2="100%"
               y2="100%"
             >
-              <stop offset="0%" style="stop-color: #22c55e" />
+              <stop offset="0%" style="stop-color: #6366f1" />
               <stop
                 offset="100%"
-                style="stop-color: #22c55e; stop-opacity: 0.3"
+                style="stop-color: #6366f1; stop-opacity: 0.3"
               />
             </linearGradient>
             <linearGradient
@@ -61,10 +61,10 @@ defineOptions({
               x2="100%"
               y2="100%"
             >
-              <stop offset="0%" style="stop-color: #3b82f6" />
+              <stop offset="0%" style="stop-color: #8b5cf6" />
               <stop
                 offset="100%"
-                style="stop-color: #3b82f6; stop-opacity: 0.3"
+                style="stop-color: #8b5cf6; stop-opacity: 0.3"
               />
             </linearGradient>
             <linearGradient
@@ -123,7 +123,7 @@ defineOptions({
             y1="90"
             x2="180"
             y2="60"
-            stroke="url(#beamGreenWelcome)"
+            stroke="url(#beamIndigoWelcome)"
             stroke-width="3"
             stroke-linecap="round"
             filter="url(#glowWelcome)"
@@ -148,8 +148,8 @@ defineOptions({
             stroke-linecap="round"
             filter="url(#glowWelcome)"
           />
-          <circle cx="185" cy="55" r="4" fill="#22C55E" opacity="0.8" />
-          <circle cx="190" cy="105" r="4" fill="#3B82F6" opacity="0.8" />
+          <circle cx="185" cy="55" r="4" fill="#6366F1" opacity="0.8" />
+          <circle cx="190" cy="105" r="4" fill="#818CF8" opacity="0.8" />
           <circle cx="185" cy="155" r="4" fill="#8B5CF6" opacity="0.8" />
         </svg>
       </div>
@@ -219,6 +219,16 @@ defineOptions({
 </template>
 
 <style scoped>
+@keyframes gradient-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .welcome-container {
   display: flex;
   align-items: center;
@@ -233,7 +243,8 @@ defineOptions({
   text-align: center;
   background: var(--el-bg-color);
   border-radius: 24px;
-  box-shadow: 0 4px 24px rgb(0 0 0 / 6%);
+  box-shadow: 0 4px 24px rgba(99, 102, 241, 0.06);
+  animation: fade-in-up 0.5s ease-out;
 }
 
 .prism-logo {
@@ -251,13 +262,15 @@ defineOptions({
 .title {
   margin-bottom: 0.75rem;
   font-family:
-    "Fira Sans",
+    "Plus Jakarta Sans",
     -apple-system,
     BlinkMacSystemFont,
     sans-serif;
   font-size: 2rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #22c55e 0%, #3b82f6 50%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+  background-size: 200% 200%;
+  animation: gradient-flow 6s ease-in-out infinite;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -296,13 +309,13 @@ defineOptions({
 }
 
 .feature-icon.green {
-  color: #22c55e;
-  background: rgb(34 197 94 / 10%);
+  color: #6366f1;
+  background: rgb(99 102 241 / 10%);
 }
 
 .feature-icon.blue {
-  color: #3b82f6;
-  background: rgb(59 130 246 / 10%);
+  color: #8b5cf6;
+  background: rgb(139 92 246 / 10%);
 }
 
 .feature-icon.purple {

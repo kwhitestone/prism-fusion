@@ -96,4 +96,10 @@ func expandEnvInConfig() {
 	global.PRISM_CONFIG.Mysql.Dbname = expandEnvWithDefault(global.PRISM_CONFIG.Mysql.Dbname)
 	global.PRISM_CONFIG.Mysql.Username = expandEnvWithDefault(global.PRISM_CONFIG.Mysql.Username)
 	global.PRISM_CONFIG.Mysql.Password = expandEnvWithDefault(global.PRISM_CONFIG.Mysql.Password)
+
+	// 展开 JWT signing-key 与 CORS 白名单中的环境变量（nucleagent 各服务在 config.yaml 用 ${VAR} 写法）
+	global.PRISM_CONFIG.JWT.SigningKey = expandEnvWithDefault(global.PRISM_CONFIG.JWT.SigningKey)
+	for i := range global.PRISM_CONFIG.CORS.Whitelist {
+		global.PRISM_CONFIG.CORS.Whitelist[i].AllowOrigin = expandEnvWithDefault(global.PRISM_CONFIG.CORS.Whitelist[i].AllowOrigin)
+	}
 }

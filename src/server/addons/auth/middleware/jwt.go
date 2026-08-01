@@ -3,6 +3,7 @@ package authMiddleware
 import (
 	"net/http"
 	"strings"
+	"sync"
 
 	"whitestone.top/prism-fusion/addons/auth/service"
 	"whitestone.top/prism-fusion/global"
@@ -16,10 +17,22 @@ var publicPaths = []string{
 	"/api/v1/addons/auth/login",
 	"/api/v1/addons/auth/register",
 	"/api/v1/addons/auth/refresh-token",
+	"/api/llm-proxy",     // LLM 代理：用 x-llm-proxy-key 自鉴权（executor S2S）
+	"/api/v1/addons/s2s", // Executor S2S：用 X-Executor-Token 自鉴权
 	"/health",
 	"/openapi",
 	"/docs",
 	"/scalar",
+}
+
+// publicPathsMu 保护 publicPaths 的并发追加。
+var publicPathsMu sync.RWMutex
+
+// AddPublicPath 运行时追加一个免 JWT 认证的路径前缀（供自鉴权的 S2S 插件用）。
+func AddPublicPath(prefix string) {
+	publicPathsMu.Lock()
+	defer publicPathsMu.Unlock()
+	publicPaths = append(publicPaths, prefix)
 }
 
 // JwtAuthMiddleware JWT 认证全局中间件
@@ -37,7 +50,10 @@ func JwtAuthMiddleware() gin.HandlerFunc {
 		}
 
 		// 白名单路径放行
-		for _, p := range publicPaths {
+		publicPathsMu.RLock()
+		paths := publicPaths
+		publicPathsMu.RUnlock()
+		for _, p := range paths {
 			if path == p || strings.HasPrefix(path, p) {
 				c.Next()
 				return

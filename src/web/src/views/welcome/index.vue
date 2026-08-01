@@ -21,8 +21,8 @@ defineOptions({
               x2="100%"
               y2="100%"
             >
-              <stop offset="0%" style="stop-color: #6366f1" />
-              <stop offset="50%" style="stop-color: #8b5cf6" />
+              <stop offset="0%" style="stop-color: #0d9488" />
+              <stop offset="50%" style="stop-color: #6366f1" />
               <stop offset="100%" style="stop-color: #8b5cf6" />
             </linearGradient>
             <linearGradient
@@ -268,7 +268,7 @@ defineOptions({
     sans-serif;
   font-size: 2rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+  background: linear-gradient(135deg, #0d9488 0%, #6366f1 50%, #8b5cf6 100%);
   background-size: 200% 200%;
   animation: gradient-flow 6s ease-in-out infinite;
   background-clip: text;

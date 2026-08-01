@@ -1,9 +1,36 @@
+# Local references / debug builds
 /references_ignore
-.env
-/.claude/settings.local.json
-/src/server/log
-/src/server/*.db
-.env
 __debug_bin*
-/references_ignore
+
+# Secrets / local settings
+.env
+.env.local
+/.claude/settings.local.json
+
+# Server runtime
+/src/server/log/
+/src/server/*.db
+
+# Build artifacts
 *.exe
+*.dll
+*.so
+*.dylib
+
+# Web frontend (src/web) build output & deps
+src/web/node_modules/
+src/web/dist/
+src/web/.vite/
+src/web/_tmp_*
+
+# Backup files
+*.bak
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

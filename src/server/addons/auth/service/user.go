@@ -3,8 +3,8 @@ package service
 import (
 	"errors"
 
-	"whitestone.top/prism-fusion/addons/auth/model"
-	"whitestone.top/prism-fusion/global"
+	"github.com/kwhitestone/prism-fusion/addons/auth/model"
+	"github.com/kwhitestone/prism-fusion/global"
 
 	"github.com/google/uuid"
 )

@@ -1,4 +1,4 @@
-module whitestone.top/prism-fusion
+module github.com/kwhitestone/prism-fusion
 
 go 1.24.0
 

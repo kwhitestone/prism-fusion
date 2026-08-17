@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
-	"whitestone.top/prism-fusion/config"
+	"github.com/kwhitestone/prism-fusion/config"
 )
 
 var (

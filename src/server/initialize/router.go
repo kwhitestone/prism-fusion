@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"strings"
 
-	"whitestone.top/prism-fusion/global"
-	"whitestone.top/prism-fusion/middleware"
-	"whitestone.top/prism-fusion/plugin"
-	"whitestone.top/prism-fusion/router"
+	"github.com/kwhitestone/prism-fusion/global"
+	"github.com/kwhitestone/prism-fusion/middleware"
+	"github.com/kwhitestone/prism-fusion/plugin"
+	"github.com/kwhitestone/prism-fusion/router"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humagin"

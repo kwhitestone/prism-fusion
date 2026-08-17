@@ -5,7 +5,7 @@ package addons
 
 import (
 	// 认证插件 - 内置 JWT（优先级 10，provider=builtin）
-	_ "whitestone.top/prism-fusion/addons/auth"
+	_ "github.com/kwhitestone/prism-fusion/addons/auth"
 	// 权限管理插件 - 内置角色管理（优先级 20，provider=builtin）
-	_ "whitestone.top/prism-fusion/addons/rbac"
+	_ "github.com/kwhitestone/prism-fusion/addons/rbac"
 )

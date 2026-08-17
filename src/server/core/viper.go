@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"whitestone.top/prism-fusion/global"
+	"github.com/kwhitestone/prism-fusion/global"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"

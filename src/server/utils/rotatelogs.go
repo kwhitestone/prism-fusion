@@ -7,7 +7,7 @@ import (
 
 	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
 	"go.uber.org/zap/zapcore"
-	"whitestone.top/prism-fusion/global"
+	"github.com/kwhitestone/prism-fusion/global"
 )
 
 // GetWriteSyncer 获取 zapcore.WriteSyncer

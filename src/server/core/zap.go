@@ -6,8 +6,8 @@ import (
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"whitestone.top/prism-fusion/global"
-	"whitestone.top/prism-fusion/utils"
+	"github.com/kwhitestone/prism-fusion/global"
+	"github.com/kwhitestone/prism-fusion/utils"
 )
 
 // Zap 获取 zap.Logger

@@ -12,7 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
-	"whitestone.top/prism-fusion/global"
+	"github.com/kwhitestone/prism-fusion/global"
 )
 
 // Logger 接收gin框架默认的日志

@@ -5,8 +5,8 @@ import (
 	"net/url"
 	"strings"
 
-	"whitestone.top/prism-fusion/config"
-	"whitestone.top/prism-fusion/global"
+	"github.com/kwhitestone/prism-fusion/config"
+	"github.com/kwhitestone/prism-fusion/global"
 
 	"github.com/gin-gonic/gin"
 )

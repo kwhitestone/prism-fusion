@@ -3,7 +3,7 @@ package initialize
 import (
 	"database/sql"
 
-	"whitestone.top/prism-fusion/global"
+	"github.com/kwhitestone/prism-fusion/global"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/sqlite"

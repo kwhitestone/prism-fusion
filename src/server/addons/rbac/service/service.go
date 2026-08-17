@@ -3,8 +3,8 @@ package service
 import (
 	"encoding/json"
 
-	"whitestone.top/prism-fusion/addons/rbac/model"
-	"whitestone.top/prism-fusion/global"
+	"github.com/kwhitestone/prism-fusion/addons/rbac/model"
+	"github.com/kwhitestone/prism-fusion/global"
 )
 
 // RoleService 角色服务

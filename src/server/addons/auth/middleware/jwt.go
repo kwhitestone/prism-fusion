@@ -5,8 +5,8 @@ import (
 	"strings"
 	"sync"
 
-	"whitestone.top/prism-fusion/addons/auth/service"
-	"whitestone.top/prism-fusion/global"
+	"github.com/kwhitestone/prism-fusion/addons/auth/service"
+	"github.com/kwhitestone/prism-fusion/global"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"

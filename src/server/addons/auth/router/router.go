@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"whitestone.top/prism-fusion/addons/auth/service"
+	"github.com/kwhitestone/prism-fusion/addons/auth/service"
 
 	"github.com/danielgtaylor/huma/v2"
 )

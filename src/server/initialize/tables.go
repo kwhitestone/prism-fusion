@@ -1,8 +1,8 @@
 package initialize
 
 import (
-	"whitestone.top/prism-fusion/global"
-	"whitestone.top/prism-fusion/plugin"
+	"github.com/kwhitestone/prism-fusion/global"
+	"github.com/kwhitestone/prism-fusion/plugin"
 
 	"go.uber.org/zap"
 )

@@ -10,7 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
-	"whitestone.top/prism-fusion/global"
+	"github.com/kwhitestone/prism-fusion/global"
 )
 
 func initServer(address string, router *gin.Engine, readTimeout, writeTimeout time.Duration) {

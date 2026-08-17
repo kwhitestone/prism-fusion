@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"whitestone.top/prism-fusion/global"
-	"whitestone.top/prism-fusion/initialize"
+	"github.com/kwhitestone/prism-fusion/global"
+	"github.com/kwhitestone/prism-fusion/initialize"
 )
 
 // RunServer 启动服务器

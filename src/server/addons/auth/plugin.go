@@ -1,12 +1,12 @@
 package auth
 
 import (
-	authMiddleware "whitestone.top/prism-fusion/addons/auth/middleware"
-	authModel "whitestone.top/prism-fusion/addons/auth/model"
-	authRouter "whitestone.top/prism-fusion/addons/auth/router"
-	"whitestone.top/prism-fusion/addons/auth/service"
-	"whitestone.top/prism-fusion/global"
-	"whitestone.top/prism-fusion/plugin"
+	authMiddleware "github.com/kwhitestone/prism-fusion/addons/auth/middleware"
+	authModel "github.com/kwhitestone/prism-fusion/addons/auth/model"
+	authRouter "github.com/kwhitestone/prism-fusion/addons/auth/router"
+	"github.com/kwhitestone/prism-fusion/addons/auth/service"
+	"github.com/kwhitestone/prism-fusion/global"
+	"github.com/kwhitestone/prism-fusion/plugin"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/gin-gonic/gin"

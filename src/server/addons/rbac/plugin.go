@@ -1,11 +1,11 @@
 package rbac
 
 import (
-	rbacModel "whitestone.top/prism-fusion/addons/rbac/model"
-	rbacRouter "whitestone.top/prism-fusion/addons/rbac/router"
-	"whitestone.top/prism-fusion/addons/rbac/service"
-	"whitestone.top/prism-fusion/global"
-	"whitestone.top/prism-fusion/plugin"
+	rbacModel "github.com/kwhitestone/prism-fusion/addons/rbac/model"
+	rbacRouter "github.com/kwhitestone/prism-fusion/addons/rbac/router"
+	"github.com/kwhitestone/prism-fusion/addons/rbac/service"
+	"github.com/kwhitestone/prism-fusion/global"
+	"github.com/kwhitestone/prism-fusion/plugin"
 
 	"github.com/danielgtaylor/huma/v2"
 )

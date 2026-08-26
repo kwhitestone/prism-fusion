@@ -18,6 +18,11 @@ import (
 // Routers 初始化总路由
 func Routers() *gin.Engine {
 	Router := gin.Default()
+	// Never trust arbitrary X-Forwarded-For values. Deployments behind a proxy
+	// must establish trust at the edge instead of accepting client-supplied IPs.
+	if err := Router.SetTrustedProxies(global.PRISM_CONFIG.System.TrustedProxies); err != nil {
+		panic(err)
+	}
 
 	// 设置gin模式
 	if global.PRISM_CONFIG.System.Env == "public" {

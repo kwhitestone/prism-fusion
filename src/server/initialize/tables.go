@@ -1,6 +1,8 @@
 package initialize
 
 import (
+	"fmt"
+
 	"github.com/kwhitestone/prism-fusion/global"
 	"github.com/kwhitestone/prism-fusion/plugin"
 
@@ -23,6 +25,7 @@ func InitTables() {
 			)
 			if err := db.AutoMigrate(models...); err != nil {
 				global.PRISM_LOG.Error("插件模型迁移失败", zap.String("plugin", p.Name()), zap.Error(err))
+				panic(fmt.Errorf("migrate plugin %s models: %w", p.Name(), err))
 			}
 		}
 	}

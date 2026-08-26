@@ -2,12 +2,16 @@
 system:
   env: 'local'  # 环境：public线上环境 local开发环境
   addr: 3180     # 服务监听端口
+  trusted-proxies: [] # 例如 ['10.0.0.0/8']；代理必须清洗 X-Forwarded-For
 
 # JWT签名（auth.provider=builtin 时使用）
 jwt:
-  signing-key: 'change-me-in-production'
-  expires-time: '7d'   # 过期时间
-  buffer-time: '1d'    # 缓冲时间
+  signing-key: '${JWT_SECRET}'
+  expires-time: '15m'  # access token 过期时间
+  refresh-expires-time: '720h' # 单个 refresh token 空闲过期时间
+  refresh-family-expires-time: '2160h' # 会话族绝对过期时间
+  refresh-rotation-grace: '60s' # 仅同一 request ID 可用的响应丢失重放窗口
+  buffer-time: '5m'    # 缓冲时间
   issuer: 'Prism-Fusion' # 签发者
 
 # 认证配置
@@ -15,6 +19,7 @@ jwt:
 # 业务项目可通过插件扩展其他 provider（如 oauth）
 auth:
   provider: 'builtin'
+  serve-routes: true
 
 # 权限控制配置
 # provider 由注册的插件决定，框架内置支持 builtin
@@ -56,6 +61,6 @@ cors:
   whitelist:
     - allow-origin: 'http://localhost:3188'
       allow-methods: 'GET,POST,PUT,DELETE,OPTIONS'
-      allow-headers: 'Content-Type,AccessToken,X-CSRF-Token,Authorization,Token,X-Token,X-User-Id'
+      allow-headers: 'Content-Type,AccessToken,X-CSRF-Token,X-Refresh-Cookie-Only,X-Refresh-Request-ID,Authorization,Token,X-Token,X-User-Id'
       expose-headers: 'Content-Length,Access-Control-Allow-Origin,Access-Control-Allow-Headers,Content-Type'
       allow-credentials: true

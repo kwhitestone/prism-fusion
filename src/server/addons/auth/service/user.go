@@ -2,15 +2,42 @@ package service
 
 import (
 	"errors"
+	"fmt"
+	"os"
+	"strings"
+	"time"
 
 	"github.com/kwhitestone/prism-fusion/addons/auth/model"
 	"github.com/kwhitestone/prism-fusion/global"
 
 	"github.com/google/uuid"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/unicode/norm"
+	"gorm.io/gorm"
 )
 
 // UserService 用户服务
 type UserService struct{}
+
+// LoginRateSubject resolves existing usernames through the same database
+// collation used by Login, then rate-limits by stable user ID. This prevents
+// case/accent/Unicode aliases accepted by MySQL from creating separate buckets.
+func (s *UserService) LoginRateSubject(username string) (string, error) {
+	if global.PRISM_DB == nil {
+		return "", errors.New("database is unavailable")
+	}
+	var identity struct{ ID uint }
+	err := global.PRISM_DB.Model(&model.User{}).
+		Select("id").Where("username = ?", username).Take(&identity).Error
+	if err == nil {
+		return fmt.Sprintf("user-id:%d", identity.ID), nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return "", err
+	}
+	canonical := cases.Fold().String(norm.NFKC.String(strings.TrimSpace(username)))
+	return "unknown:" + canonical, nil
+}
 
 // Login 用户登录
 func (s *UserService) Login(username, password string) (*model.User, error) {
@@ -104,23 +131,90 @@ func (s *UserService) ChangePassword(userID uint, oldPassword, newPassword strin
 	return global.PRISM_DB.Model(&user).Update("password", user.Password).Error
 }
 
-// SeedAdminUser 初始化管理员用户（如果不存在）
-func (s *UserService) SeedAdminUser() {
-	var count int64
-	global.PRISM_DB.Model(&model.User{}).Count(&count)
-	if count > 0 {
-		return
+// BootstrapAdminFromEnvironment creates an administrator only when the
+// operator explicitly supplies one-time credentials. It never logs or embeds
+// the password, and it never promotes an existing non-admin account.
+func (s *UserService) BootstrapAdminFromEnvironment() error {
+	username := strings.TrimSpace(os.Getenv("AUTH_BOOTSTRAP_ADMIN_USERNAME"))
+	password := os.Getenv("AUTH_BOOTSTRAP_ADMIN_PASSWORD")
+	credentialsProvided := username != "" || password != ""
+	if username == "" || password == "" {
+		if credentialsProvided {
+			return errors.New("both AUTH_BOOTSTRAP_ADMIN_USERNAME and AUTH_BOOTSTRAP_ADMIN_PASSWORD are required")
+		}
+	}
+	if credentialsProvided &&
+		(len(username) < 2 || len(username) > 64 || len(password) < 12 || len(password) > 128) {
+		return errors.New("bootstrap admin username or password does not meet length requirements")
+	}
+	if global.PRISM_DB == nil {
+		return errors.New("database is unavailable for administrator bootstrap")
+	}
+	var legacy model.User
+	legacyErr := global.PRISM_DB.
+		Where("username = ? AND role_id = ?", "admin", 999).
+		First(&legacy).Error
+	if legacyErr == nil && legacy.CheckPassword("admin123") {
+		if credentialsProvided && username == "admin" {
+			rotated := legacy
+			if err := rotated.SetPassword(password); err != nil {
+				return errors.New("failed to hash migrated administrator password")
+			}
+			return global.PRISM_DB.Transaction(func(tx *gorm.DB) error {
+				now := time.Now()
+				if err := tx.Model(&model.RefreshSession{}).
+					Where("user_id = ? AND revoked_at IS NULL", legacy.ID).
+					Update("revoked_at", now).Error; err != nil {
+					return err
+				}
+				return tx.Model(&model.User{}).Where("id = ?", legacy.ID).Updates(map[string]any{
+					"password": rotated.Password,
+					"enable":   1,
+				}).Error
+			})
+		}
+		freezeErr := global.PRISM_DB.Transaction(func(tx *gorm.DB) error {
+			now := time.Now()
+			if err := tx.Model(&model.RefreshSession{}).
+				Where("user_id = ? AND revoked_at IS NULL", legacy.ID).
+				Update("revoked_at", now).Error; err != nil {
+				return err
+			}
+			return tx.Model(&model.User{}).Where("id = ?", legacy.ID).Update("enable", 2).Error
+		})
+		if freezeErr != nil {
+			return freezeErr
+		}
+		return errors.New("legacy default administrator was disabled; set explicit bootstrap credentials for username admin to rotate it")
+	}
+	if legacyErr != nil && !errors.Is(legacyErr, gorm.ErrRecordNotFound) {
+		return legacyErr
+	}
+	if !credentialsProvided {
+		return nil
+	}
+
+	var existing model.User
+	err := global.PRISM_DB.Where("username = ?", username).First(&existing).Error
+	if err == nil {
+		if existing.RoleID == 999 {
+			return nil
+		}
+		return fmt.Errorf("bootstrap username %q already belongs to a non-admin account", username)
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
 	}
 
 	admin := &model.User{
 		UUID:     uuid.New().String(),
-		Username: "admin",
-		NickName: "超级管理员",
+		Username: username,
+		NickName: "Administrator",
 		RoleID:   999,
 		Enable:   1,
 	}
-	_ = admin.SetPassword("admin123")
-	global.PRISM_DB.Create(admin)
-
-	global.PRISM_LOG.Info("初始化管理员用户完成: admin / admin123")
+	if err := admin.SetPassword(password); err != nil {
+		return errors.New("failed to hash bootstrap administrator password")
+	}
+	return global.PRISM_DB.Create(admin).Error
 }

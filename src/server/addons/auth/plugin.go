@@ -32,6 +32,11 @@ func isEnabled() bool {
 	return provider == "" || provider == "builtin"
 }
 
+func shouldServeRoutes() bool {
+	configured := global.PRISM_CONFIG.Auth.ServeRoutes
+	return configured == nil || *configured
+}
+
 func (p *AuthPlugin) Priority() int {
 	// 认证插件最先执行
 	return 10
@@ -45,12 +50,19 @@ func (p *AuthPlugin) RegisterRoutes(api huma.API) {
 	if !isEnabled() {
 		return
 	}
+	if err := service.ValidateTokenConfiguration(); err != nil {
+		panic(err)
+	}
+	if !shouldServeRoutes() {
+		return
+	}
 
 	authRouter.RegisterRoutes(api)
 
-	// 初始化种子数据（管理员用户）
 	userService := &service.UserService{}
-	userService.SeedAdminUser()
+	if err := userService.BootstrapAdminFromEnvironment(); err != nil {
+		panic(err)
+	}
 
 	global.PRISM_LOG.Info("Auth plugin routes registered")
 }
@@ -61,6 +73,8 @@ func (p *AuthPlugin) Models() []interface{} {
 	}
 	return []interface{}{
 		&authModel.User{},
+		&authModel.RefreshSession{},
+		&authModel.AuthRateWindow{},
 	}
 }
 

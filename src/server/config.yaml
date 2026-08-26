@@ -2,17 +2,22 @@
 system:
   env: 'local'  # 环境：public线上环境 local开发环境
   addr: 3180     # 服务监听端口
+  trusted-proxies: [] # 反代部署时显式配置可信代理 CIDR
 
 # JWT签名（auth.provider=builtin 时使用）
 jwt:
-  signing-key: 'Prism-Fusion-Secret-Key'
-  expires-time: '7d'   # 过期时间
-  buffer-time: '1d'    # 缓冲时间
+  signing-key: '${JWT_SECRET}'
+  expires-time: '15m'  # access token 过期时间
+  refresh-expires-time: '720h' # 单个 refresh token 空闲过期时间
+  refresh-family-expires-time: '2160h' # 会话族绝对过期时间
+  refresh-rotation-grace: '60s' # 仅同一 request ID 可用的响应丢失重放窗口
+  buffer-time: '5m'    # 缓冲时间
   issuer: 'Prism-Fusion' # 签发者
 
 # 认证配置
 auth:
   provider: 'builtin'  # builtin(内置JWT) 或业务插件提供的 provider（如 oauth）
+  serve-routes: true   # 仅认证服务应开启；资源服务设为 false，仅保留 JWT middleware
 
 # 权限控制配置
 rbac:
@@ -66,6 +71,6 @@ cors:
     # 仅需配置真正的跨域场景，同源请求会自动放行
     - allow-origin: 'http://localhost:3188'
       allow-methods: 'GET,POST,PUT,DELETE,OPTIONS'
-      allow-headers: 'Content-Type,AccessToken,X-CSRF-Token,Authorization,Token,X-Token,X-User-Id,auth_token'
+      allow-headers: 'Content-Type,AccessToken,X-CSRF-Token,X-Refresh-Cookie-Only,X-Refresh-Request-ID,Authorization,Token,X-Token,X-User-Id,auth_token'
       expose-headers: 'Content-Length,Access-Control-Allow-Origin,Access-Control-Allow-Headers,Content-Type'
       allow-credentials: true

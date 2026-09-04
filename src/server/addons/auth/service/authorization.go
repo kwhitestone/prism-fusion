@@ -16,8 +16,32 @@ var (
 )
 
 type AuthorizationState struct {
-	Roles       []string `json:"roles"`
-	Permissions []string `json:"permissions"`
+	Roles       []string            `json:"roles"`
+	Permissions []string            `json:"permissions"`
+	Menus       []AuthorizationMenu `json:"menus"`
+}
+
+// AuthorizationMenu is the auth-facing navigation contract. Keeping this DTO
+// in the auth addon lets authorization providers contribute menus without
+// coupling auth to a concrete RBAC model package.
+type AuthorizationMenu struct {
+	ID             uint   `json:"id"`
+	ParentID       uint   `json:"parentId"`
+	Code           string `json:"code"`
+	Name           string `json:"name,omitempty"`
+	Component      string `json:"component,omitempty"`
+	Redirect       string `json:"redirect,omitempty"`
+	Title          string `json:"title"`
+	TitleKey       string `json:"titleKey,omitempty"`
+	Path           string `json:"path"`
+	Icon           string `json:"icon,omitempty"`
+	App            string `json:"app,omitempty"`
+	Type           string `json:"type"`
+	PermissionCode string `json:"permissionCode,omitempty"`
+	Sort           int    `json:"sort"`
+	IsVisible      *bool  `json:"isVisible"`
+	Rank           int    `json:"rank,omitempty"`
+	ShowLink       *bool  `json:"showLink,omitempty"`
 }
 
 type AuthorizationResolver func(context.Context, uint, uint) (*AuthorizationState, error)
@@ -85,5 +109,5 @@ func legacyAuthorization(roleID uint) *AuthorizationState {
 			roles = []string{"admin"}
 		}
 	}
-	return &AuthorizationState{Roles: roles, Permissions: []string{}}
+	return &AuthorizationState{Roles: roles, Permissions: []string{}, Menus: []AuthorizationMenu{}}
 }

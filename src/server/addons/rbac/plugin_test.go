@@ -1,6 +1,7 @@
 package rbac
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -9,6 +10,8 @@ import (
 	"github.com/gin-gonic/gin"
 	authAddon "github.com/kwhitestone/prism-fusion/addons/auth"
 	authModel "github.com/kwhitestone/prism-fusion/addons/auth/model"
+	rbacModel "github.com/kwhitestone/prism-fusion/addons/rbac/model"
+	rbacService "github.com/kwhitestone/prism-fusion/addons/rbac/service"
 	"github.com/kwhitestone/prism-fusion/config"
 	"github.com/kwhitestone/prism-fusion/global"
 	"github.com/kwhitestone/prism-fusion/plugin"
@@ -61,6 +64,24 @@ func TestPluginCanBeSoleControlPlaneOrDisabledConsumer(t *testing.T) {
 	}
 	builtinAPI := humagin.New(gin.New(), huma.DefaultConfig("builtin", "1"))
 	plugin.RegisterRoutes(builtinAPI)
+	visible := true
+	hidden := false
+	if err := db.Create(&authModel.User{ID: 7, UUID: "menu-user", Username: "menu-user", RoleID: rbacService.SuperAdminRoleID, Enable: 1}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&rbacModel.Menu{Code: "workspace", Title: "Workspace", Path: "/workspace", App: "core", Type: "menu", IsVisible: &visible}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&rbacModel.Menu{Code: "hidden_workspace", Title: "Hidden workspace", Path: "/hidden", App: "core", Type: "menu", IsVisible: &hidden}).Error; err != nil {
+		t.Fatal(err)
+	}
+	access, err := resolveAuthorization(context.Background(), 7, rbacService.SuperAdminRoleID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(access.Menus) != 1 || access.Menus[0].Code != "workspace" || access.Menus[0].Path != "/workspace" {
+		t.Fatalf("authorization visible menus = %#v", access.Menus)
+	}
 }
 
 func TestBuiltinRBACFailsFastWhenBuiltinAuthIsInactive(t *testing.T) {

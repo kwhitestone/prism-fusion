@@ -1,11 +1,26 @@
 package auth
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/kwhitestone/prism-fusion/config"
 	"github.com/kwhitestone/prism-fusion/global"
 )
+
+func TestAuthPluginDeclaresOnlyItsOwnedEndpointScopes(t *testing.T) {
+	manifest := (&AuthPlugin{}).Manifest()
+	want := []string{
+		"/api/v1/addons/auth/login",
+		"/api/v1/addons/auth/logout",
+		"/api/v1/addons/auth/refresh-token",
+		"/api/v1/addons/auth/register",
+		"/api/v1/addons/auth/user-info",
+	}
+	if !reflect.DeepEqual(manifest.RouteScopes, want) {
+		t.Fatalf("RouteScopes = %v, want %v", manifest.RouteScopes, want)
+	}
+}
 
 func TestShouldServeRoutesCanDisableResourceServiceAuthEndpoints(t *testing.T) {
 	previous := global.PRISM_CONFIG

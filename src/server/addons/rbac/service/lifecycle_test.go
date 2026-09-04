@@ -160,14 +160,26 @@ func TestRegisteredSeedsAndLegacyReaders(t *testing.T) {
 	if child.ParentID != parent.ID {
 		t.Fatalf("child parent=%d want=%d", child.ParentID, parent.ID)
 	}
+	if err := db.Model(&child).Updates(map[string]any{"title": "Custom edit", "sort": 99}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := SeedRegisteredData(); err != nil {
+		t.Fatalf("reseed after menu edit: %v", err)
+	}
+	if err := db.Where("code = ?", "test_catalog_edit").First(&child).Error; err != nil {
+		t.Fatal(err)
+	}
+	if child.Title != "Custom edit" || child.Sort != 99 {
+		t.Fatalf("registered menu edit was overwritten: %#v", child)
+	}
 	if err := NewAccessService(db).DeleteMenu(context.Background(), 7, child.ID, "seed-delete"); err != nil {
 		t.Fatal(err)
 	}
 	if err := SeedRegisteredData(); err != nil {
-		t.Fatalf("registered menu must be recoverable after soft delete: %v", err)
+		t.Fatalf("reseed after menu deletion: %v", err)
 	}
-	if err := db.Where("code = ?", "test_catalog_edit").First(&child).Error; err != nil {
-		t.Fatalf("registered menu was not restored: %v", err)
+	if err := db.Where("code = ?", "test_catalog_edit").First(&child).Error; !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Fatalf("deleted registered menu was unexpectedly restored: %v", err)
 	}
 	hide := false
 	if err := db.Model(&parent).Updates(map[string]any{
@@ -570,7 +582,7 @@ func TestSeedRegistrationRejectsInvalidFields(t *testing.T) {
 	}
 }
 
-func TestSeedMenusRejectsCycleWithExistingRows(t *testing.T) {
+func TestSeedMenusPreservesExistingHierarchyOnCodeConflict(t *testing.T) {
 	db := openAccessTestDB(t)
 	parent := model.Menu{Code: "existing_parent", Title: "Parent", App: "example", Type: "menu"}
 	child := model.Menu{Code: "existing_child", Title: "Child", App: "example", Type: "menu"}
@@ -588,15 +600,15 @@ func TestSeedMenusRejectsCycleWithExistingRows(t *testing.T) {
 			App: parent.App, Type: parent.Type, IsVisible: true,
 		}}, map[string]model.Permission{})
 	})
-	if !errors.Is(err, ErrMenuCycle) {
-		t.Fatalf("seedMenus error=%v, want ErrMenuCycle", err)
+	if err != nil {
+		t.Fatalf("seedMenus must preserve the administrator-owned row: %v", err)
 	}
 	var reloaded model.Menu
 	if err := db.First(&reloaded, parent.ID).Error; err != nil {
 		t.Fatal(err)
 	}
 	if reloaded.ParentID != 0 {
-		t.Fatalf("cyclic seed was not rolled back: parent_id=%d", reloaded.ParentID)
+		t.Fatalf("seed changed the existing hierarchy: parent_id=%d", reloaded.ParentID)
 	}
 }
 

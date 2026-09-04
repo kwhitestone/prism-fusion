@@ -504,9 +504,12 @@ func seedMenus(tx *gorm.DB, seeds []MenuSeed, permissions map[string]model.Permi
 			Path: seed.Path, Icon: seed.Icon, App: seed.App, Type: seed.Type,
 			PermissionCode: seed.PermissionCode, Sort: seed.Sort, IsVisible: &visible,
 		}
+		// Menus are administrator-owned after their first insertion. Reapplying
+		// plugin seeds must not overwrite edits or resurrect a soft-deleted menu
+		// on every process restart.
 		if err := tx.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "code"}},
-			DoUpdates: clause.AssignmentColumns([]string{"parent_id", "title", "title_key", "path", "icon", "app", "type", "permission_code", "sort", "is_visible", "deleted_at"}),
+			DoNothing: true,
 		}).Create(&menu).Error; err != nil {
 			return err
 		}

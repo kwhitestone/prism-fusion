@@ -19,7 +19,7 @@ func TestAuthorizationFallsBackSafelyWhenBuiltinRBACIsNotLinked(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve fallback authorization: %v", err)
 	}
-	if !reflect.DeepEqual(state.Roles, []string{"admin"}) || len(state.Permissions) != 0 {
+	if !reflect.DeepEqual(state.Roles, []string{"admin"}) || len(state.Permissions) != 0 || state.Menus == nil {
 		t.Fatalf("fallback authorization = %#v", state)
 	}
 }

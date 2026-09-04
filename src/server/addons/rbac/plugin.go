@@ -36,11 +36,31 @@ func init() {
 }
 
 func resolveAuthorization(ctx context.Context, userID, _ uint) (*authService.AuthorizationState, error) {
-	access, err := service.NewAccessService(global.PRISM_DB).ResolveUserAuthorization(ctx, userID)
+	access, err := service.NewAccessService(global.PRISM_DB).ResolveUserAccess(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	return &authService.AuthorizationState{Roles: access.Roles, Permissions: access.Permissions}, nil
+	menus := make([]authService.AuthorizationMenu, 0, len(access.Menus))
+	for _, menu := range access.Menus {
+		// Auth responses are a navigation contract, not the complete menu
+		// administration catalog. Hidden rows remain available to RBAC managers
+		// but must not be advertised to login/user-info consumers.
+		if menu.IsVisible != nil && !*menu.IsVisible {
+			continue
+		}
+		menus = append(menus, authService.AuthorizationMenu{
+			ID: menu.ID, ParentID: menu.ParentID, Code: menu.Code,
+			Name: menu.Name, Component: menu.Component, Redirect: menu.Redirect,
+			Title: menu.Title, TitleKey: menu.TitleKey, Path: menu.Path, Icon: menu.Icon,
+			App: menu.App, Type: menu.Type, PermissionCode: menu.PermissionCode,
+			Sort: menu.Sort, IsVisible: menu.IsVisible, Rank: menu.Rank, ShowLink: menu.ShowLink,
+		})
+	}
+	return &authService.AuthorizationState{
+		Roles:       append([]string(nil), access.Roles...),
+		Permissions: append([]string(nil), access.Permissions...),
+		Menus:       menus,
+	}, nil
 }
 
 // isEnabled 检查 builtin rbac 是否启用（默认启用）

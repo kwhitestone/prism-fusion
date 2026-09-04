@@ -46,6 +46,26 @@ func (p *AuthPlugin) RoutePrefix() string {
 	return "/api/v1/addons/auth"
 }
 
+// Manifest lists the concrete auth endpoints instead of claiming the entire
+// /auth namespace, which is also home to independently scoped addons such as
+// API key management.
+func (p *AuthPlugin) Manifest() plugin.Manifest {
+	return plugin.Manifest{
+		APIVersion:  plugin.APIVersionV2,
+		ID:          "auth",
+		Version:     "1.0.0",
+		Kind:        plugin.KindBackendAddon,
+		Description: p.Description(),
+		RouteScopes: []string{
+			"/api/v1/addons/auth/login",
+			"/api/v1/addons/auth/logout",
+			"/api/v1/addons/auth/refresh-token",
+			"/api/v1/addons/auth/register",
+			"/api/v1/addons/auth/user-info",
+		},
+	}
+}
+
 func (p *AuthPlugin) PluginEnabled() bool {
 	return isEnabled()
 }

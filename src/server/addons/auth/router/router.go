@@ -20,13 +20,14 @@ var (
 
 // LoginUserInfo 登录响应中的用户信息
 type LoginUserInfo struct {
-	ID          uint     `json:"id" doc:"用户ID"`
-	Username    string   `json:"username" doc:"用户名"`
-	NickName    string   `json:"nickName" doc:"昵称"`
-	HeaderImg   string   `json:"headerImg" doc:"头像"`
-	RoleID      uint     `json:"roleId" doc:"兼容旧客户端的主角色ID"`
-	Roles       []string `json:"roles" doc:"已启用角色编码"`
-	Permissions []string `json:"permissions" doc:"当前有效权限"`
+	ID          uint                        `json:"id" doc:"用户ID"`
+	Username    string                      `json:"username" doc:"用户名"`
+	NickName    string                      `json:"nickName" doc:"昵称"`
+	HeaderImg   string                      `json:"headerImg" doc:"头像"`
+	RoleID      uint                        `json:"roleId" doc:"兼容旧客户端的主角色ID"`
+	Roles       []string                    `json:"roles" doc:"已启用角色编码"`
+	Permissions []string                    `json:"permissions" doc:"当前有效权限"`
+	Menus       []service.AuthorizationMenu `json:"menus" doc:"当前可见菜单"`
 }
 
 // LoginData 登录/刷新 Token 响应数据
@@ -40,13 +41,14 @@ type LoginData struct {
 
 // UserInfoData 用户信息响应数据
 type UserInfoData struct {
-	ID          uint     `json:"id" doc:"用户ID"`
-	Username    string   `json:"username" doc:"用户名"`
-	NickName    string   `json:"nickName" doc:"昵称"`
-	HeaderImg   string   `json:"headerImg" doc:"头像"`
-	RoleID      uint     `json:"roleId" doc:"兼容旧客户端的主角色ID"`
-	Roles       []string `json:"roles" doc:"已启用角色编码"`
-	Permissions []string `json:"permissions" doc:"当前有效权限"`
+	ID          uint                        `json:"id" doc:"用户ID"`
+	Username    string                      `json:"username" doc:"用户名"`
+	NickName    string                      `json:"nickName" doc:"昵称"`
+	HeaderImg   string                      `json:"headerImg" doc:"头像"`
+	RoleID      uint                        `json:"roleId" doc:"兼容旧客户端的主角色ID"`
+	Roles       []string                    `json:"roles" doc:"已启用角色编码"`
+	Permissions []string                    `json:"permissions" doc:"当前有效权限"`
+	Menus       []service.AuthorizationMenu `json:"menus" doc:"当前可见菜单"`
 }
 
 // LoginInput 登录请求体
@@ -189,6 +191,7 @@ func RegisterRoutes(api huma.API) {
 				RoleID:      user.RoleID,
 				Roles:       access.Roles,
 				Permissions: access.Permissions,
+				Menus:       access.Menus,
 			},
 		}
 		return resp, nil
@@ -282,6 +285,7 @@ func RegisterRoutes(api huma.API) {
 				RoleID:      user.RoleID,
 				Roles:       access.Roles,
 				Permissions: access.Permissions,
+				Menus:       access.Menus,
 			},
 		}
 		return resp, nil
@@ -361,6 +365,7 @@ func RegisterRoutes(api huma.API) {
 			RoleID:      user.RoleID,
 			Roles:       access.Roles,
 			Permissions: access.Permissions,
+			Menus:       access.Menus,
 		}
 		return resp, nil
 	})

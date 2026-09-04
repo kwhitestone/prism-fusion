@@ -30,13 +30,13 @@
 **Prism Fusion** 是一个基于 Vue 3 + Go 的现代化全栈框架，核心设计理念是 **纯净** 与 **全插件化**。
 
 - **纯净**：框架核心极简，不预置任何业务逻辑，所有功能（认证、权限、仪表盘等）作为可插拔插件存在
-- **全插件化**：前后端统一的插件体系，前端 `import.meta.glob` 自动发现、后端一行 `import` 即可加载，零配置启用
+- **全插件化**：后端插件通过导入注册；框架内前端插件由 `import.meta.glob` 发现，业务前端插件通过类型安全 API 显式注入
 - **可扩展**：业务项目通过 git submodule 引用框架，自由组合内置插件或开发独立的业务插件
 
 ```
 prism-fusion/
 ├── src/
-│   ├── admin/                # 前端 (Vue 3 + Vite + Element Plus + TailwindCSS)
+│   ├── web/                  # 前端 (Vue 3 + Vite + Element Plus + TailwindCSS)
 │   │   ├── src/addons/       # 前端内置插件（自动发现）
 │   │   ├── src/plugin/       # 插件系统核心（loader / types）
 │   │   ├── src/core/         # 框架核心模块（npm 导出入口）
@@ -58,9 +58,9 @@ prism-fusion/
 
 - **🔌 全插件化架构** — 前后端对称的插件体系，功能即插即用
 - **🧊 纯净内核** — 框架零业务耦合，认证、RBAC、仪表盘皆为可选插件
-- **🔄 自动发现** — 前端 `import.meta.glob` + 后端 Go `init()` 双重自动注册
+- **🔄 明确装配** — 框架内前端插件自动发现、业务前端插件显式注入，后端由 Go `init()` 注册并在启动时校验
 - **📐 类型安全** — Go `Plugin` 接口 + TypeScript `PluginModule` 类型全链路保障
-- **🔀 Provider 可替换** — 认证 / 权限的 provider 可配置（`builtin` / 自定义 / `casbin` 等），业务项目无需改框架代码
+- **🧩 V2 Manifest** — 显式声明插件身份、能力、依赖、冲突与路由作用域，V1 插件仍保持兼容
 - **📦 Submodule 友好** — 业务项目通过 git submodule + go.work + pnpm workspace 引用框架，独立版本管理
 
 ### 后端
@@ -104,6 +104,7 @@ prism-fusion/
 ```bash
 cd src/server
 cp config.example.yaml config.yaml   # 按需修改配置
+export JWT_SECRET="$(openssl rand -hex 32)" # 至少 32 字节，生产环境由密钥管理系统注入
 go mod tidy
 go run main.go
 ```
@@ -131,11 +132,16 @@ pnpm dev
 ```bash
 # 独立构建
 docker build -t prism-fusion .
+export JWT_SECRET="$(openssl rand -hex 32)"
+docker run --rm -p 3180:3180 -e JWT_SECRET="$JWT_SECRET" prism-fusion
 
 # 使用 Compose（builtin 认证）
 cp .env.example .env   # 按需修改
+export JWT_SECRET="$(openssl rand -hex 32)"
 docker compose up -d
 ```
+
+`JWT_SECRET` 是 builtin 认证的必填配置，至少 32 字节；生产环境应由密钥管理系统注入，不要写入仓库或镜像。
 
 ## 插件化架构
 
@@ -146,8 +152,8 @@ Prism Fusion 的核心竞争力在于**前后端统一的全插件化架构**。
 | 原则 | 说明 |
 |------|------|
 | **高内聚低耦合** | 插件内部自包含（路由、模型、服务、中间件），与框架通过接口解耦 |
-| **零配置加载** | 前端完全自动发现，后端仅需一行 import |
-| **Provider 可替换** | 同一功能域（如认证）可由不同插件提供实现，通过 `config.yaml` 切换 |
+| **明确加载边界** | 框架内前端 addon 自动发现；业务 addon 显式注入；后端导入后统一校验 |
+| **可验证装配** | V2 Manifest 声明依赖、冲突和能力，启动时统一校验并稳定排序 |
 | **类型安全** | Go `Plugin` 接口 + TypeScript `PluginModule` 类型保障开发体验 |
 | **前后端对称** | 目录结构一致，便于团队协作 |
 
@@ -159,7 +165,7 @@ Prism Fusion 的核心竞争力在于**前后端统一的全插件化架构**。
 // addons/my-plugin/plugin.go
 package myplugin
 
-import "whitestone.top/prism-fusion/plugin"
+import "github.com/kwhitestone/prism-fusion/plugin"
 
 func init() {
     plugin.Register(&MyPlugin{
@@ -182,7 +188,7 @@ func (p *MyPlugin) Models() []interface{} { return []interface{}{&MyModel{}} }
 在 `addons/addons.go` 中添加一行导入即可启用：
 
 ```go
-import _ "whitestone.top/prism-fusion/addons/my-plugin"
+import _ "github.com/kwhitestone/prism-fusion/addons/my-plugin"
 ```
 
 #### Plugin 接口
@@ -200,9 +206,35 @@ type Plugin interface {
 }
 ```
 
+#### V2 Manifest（推荐）
+
+V2 不修改原 `Plugin` 接口。新插件可额外实现 `ManifestProvider`，旧插件会自动获得 V1 兼容 Manifest：
+
+```go
+func (p *MyPlugin) Manifest() plugin.Manifest {
+    return plugin.Manifest{
+        APIVersion: plugin.APIVersionV2,
+        ID:         "my-plugin",
+        Version:    "2.0.0",
+        Kind:       plugin.KindBackendAddon,
+        Provides:   []string{"example.items"},
+        Requires: []plugin.Dependency{
+            {ID: "auth"},
+        },
+        RouteScopes: []string{"/api/v1/addons/my-plugin"},
+    }
+}
+```
+
+注册表会拒绝空 ID、非规范 ID、重复 ID、缺失必需依赖、已安装冲突与依赖环。依赖关系优先于 `Priority()`；其余插件按 `Priority()`、ID 稳定排序。首次装配时注册表冻结，之后注册会失败。
+
+内置 `rbac` 是首个迁移到 Manifest V2 的插件，并显式声明对 `auth` 的依赖；`auth` 保留为 V1 兼容样本。被配置关闭的依赖不会参与装配，也不能满足其他插件的必需依赖。
+
+完整规则与当前分阶段边界见 [Plugin Specification V2](docs/plugin-spec-v2.md)。
+
 ### 前端插件
 
-导出 `PluginModule` 到 `addons/*/index.ts`，**无需任何配置**自动加载：
+框架仓库内的 addon 导出 `PluginModule` 到 `addons/*/index.ts` 后会自动加载。业务项目中的 addon 还需要通过 `registerExternalPlugins` 显式注入：
 
 ```typescript
 // addons/my-plugin/index.ts
@@ -214,8 +246,8 @@ const plugin: PluginModule = {
   version: "1.0.0",
   routes: [/* Vue Router 路由配置 */],
   permissions: [
-    { key: "my-plugin:create", name: "新建" },
-    { key: "my-plugin:delete", name: "删除" },
+    { key: "my-plugin:item:create", name: "新建" },
+    { key: "my-plugin:item:delete", name: "删除" },
   ],
   setup() {
     // 插件初始化逻辑（注入策略、注册处理器等）
@@ -223,6 +255,8 @@ const plugin: PluginModule = {
 };
 export default plugin;
 ```
+
+权限码必须使用 `domain:resource:action` 三段格式；每段使用小写字母、数字、下划线或连字符，RBAC 会在种子注册和写库前拒绝无效权限码。
 
 #### PluginModule 接口
 
@@ -245,7 +279,8 @@ interface PluginModule {
 | 端 | 机制 | 触发方式 |
 |---|------|---------|
 | 后端 | Go `init()` + `plugin.Register()` | 在 `addons/addons.go` 中 import 插件包 |
-| 前端 | Vite `import.meta.glob("../addons/*/index.ts")` | 自动扫描，无需手动注册 |
+| 前端（框架内） | Vite `import.meta.glob("../addons/*/index.ts")` | 自动扫描框架自身 addon |
+| 前端（业务项目） | `registerExternalPlugins([...])` | 由业务入口显式注入，构建时可追踪 |
 | 联动 | 前端启动后上报插件注册表到后端 | `POST /api/v1/system/plugin-registry` |
 
 ### 内置插件
@@ -257,7 +292,7 @@ interface PluginModule {
 | `auth` | JWT 登录、注册、Token 刷新、用户管理 | `builtin` | 10 |
 | `rbac` | 角色、权限、动态路由管理 | `builtin` | 20 |
 
-> 业务项目可通过注册同名但不同 provider 的插件来替换内置实现（如 `oauth-auth` 替换 `auth`），在 `config.yaml` 中切换 `auth.provider` / `rbac.provider` 即可。
+> V2 会拒绝同名插件，不能再用“后注册覆盖前注册”模拟 provider 替换。`auth.provider` / `rbac.provider` 目前仍是各能力域自己的配置行为；内置 RBAC 依赖内置 Auth 的用户表、JWT actor 与会话吊销，因此 `auth.provider` 非 `builtin` 时必须同时把 `rbac.provider` 配置为 `external`、`disabled` 或由业务侧整体接管。通用 Auth/RBAC capability contract 与 Provider contribution registry 将在后续 V2 阶段提供。
 
 ## 在业务项目中使用
 
@@ -278,7 +313,7 @@ my-project/
 │       ├── src/addons/            # 业务前端插件
 │       ├── pnpm-workspace.yaml    # 引用框架: ../../prism-fusion/src/web
 │       ├── vite.config.ts         # alias @ → 框架 src
-│       └── package.json           # 依赖 "prism-fusion-admin": "workspace:*"
+│       └── package.json           # 依赖 "prism-fusion-web": "workspace:*"
 ├── docker-compose.yaml
 └── .env
 ```
@@ -287,10 +322,10 @@ my-project/
 
 | 层 | 机制 | 说明 |
 |----|------|------|
-| Go 后端 | `go.work` + `replace` | 将 `whitestone.top/prism-fusion` 指向本地 submodule |
+| Go 后端 | `go.work` + `replace` | 将 `github.com/kwhitestone/prism-fusion` 指向本地 submodule |
 | Vue 前端 | pnpm workspace | 框架作为 workspace 包，业务项目直接 import |
 | Vite | alias `@` → 框架 src | 框架内部 `@/` 引用自动解析到正确路径 |
-| 插件 | 框架内置 + 业务自定义 | 两者并存，统一自动发现加载 |
+| 插件 | 框架内置 + 业务自定义 | 两者并存，业务前端插件由入口显式注入 |
 
 ## 配置参考
 
@@ -302,14 +337,16 @@ system:
   addr: 3180            # 服务端口
 
 auth:
-  provider: builtin     # 认证 provider（builtin / custom / ...）
+  provider: builtin     # builtin 或由业务插件实现的认证 provider
 
 rbac:
-  provider: builtin     # 权限 provider（builtin / casbin / ...）
+  provider: builtin     # builtin / external / disabled / 已注册的自定义 provider
 
 jwt:
-  signing-key: change-me-in-production
-  expires-time: 7d
+  signing-key: '${JWT_SECRET}' # 至少 32 字节，必须通过环境变量注入
+  expires-time: 15m
+  refresh-expires-time: 720h
+  refresh-family-expires-time: 2160h
 
 sqlite:
   path: ./prism_fusion.db

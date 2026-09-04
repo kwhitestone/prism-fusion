@@ -5,27 +5,28 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/kwhitestone/prism-fusion/addons/auth/service"
-
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/kwhitestone/prism-fusion/addons/auth/service"
 )
 
 var (
 	jwtService            = &service.JwtService{}
 	userService           = &service.UserService{}
 	refreshSessionService = &service.RefreshSessionService{}
-	authRateLimitService   = &service.AuthRateLimitService{}
+	authRateLimitService  = &service.AuthRateLimitService{}
 )
 
 // ---- Named response data types (avoid Huma "duplicate name: DataStruct") ----
 
 // LoginUserInfo 登录响应中的用户信息
 type LoginUserInfo struct {
-	ID        uint   `json:"id" doc:"用户ID"`
-	Username  string `json:"username" doc:"用户名"`
-	NickName  string `json:"nickName" doc:"昵称"`
-	HeaderImg string `json:"headerImg" doc:"头像"`
-	RoleID    uint   `json:"roleId" doc:"角色ID"`
+	ID          uint     `json:"id" doc:"用户ID"`
+	Username    string   `json:"username" doc:"用户名"`
+	NickName    string   `json:"nickName" doc:"昵称"`
+	HeaderImg   string   `json:"headerImg" doc:"头像"`
+	RoleID      uint     `json:"roleId" doc:"兼容旧客户端的主角色ID"`
+	Roles       []string `json:"roles" doc:"已启用角色编码"`
+	Permissions []string `json:"permissions" doc:"当前有效权限"`
 }
 
 // LoginData 登录/刷新 Token 响应数据
@@ -39,27 +40,28 @@ type LoginData struct {
 
 // UserInfoData 用户信息响应数据
 type UserInfoData struct {
-	ID        uint     `json:"id" doc:"用户ID"`
-	Username  string   `json:"username" doc:"用户名"`
-	NickName  string   `json:"nickName" doc:"昵称"`
-	HeaderImg string   `json:"headerImg" doc:"头像"`
-	RoleID    uint     `json:"roleId" doc:"角色ID"`
-	Roles     []string `json:"roles" doc:"角色列表"`
+	ID          uint     `json:"id" doc:"用户ID"`
+	Username    string   `json:"username" doc:"用户名"`
+	NickName    string   `json:"nickName" doc:"昵称"`
+	HeaderImg   string   `json:"headerImg" doc:"头像"`
+	RoleID      uint     `json:"roleId" doc:"兼容旧客户端的主角色ID"`
+	Roles       []string `json:"roles" doc:"已启用角色编码"`
+	Permissions []string `json:"permissions" doc:"当前有效权限"`
 }
 
 // LoginInput 登录请求体
 type LoginInput struct {
 	CookieOnly string `header:"X-Refresh-Cookie-Only" doc:"使用 HttpOnly cookie 保存刷新凭据"`
-	Body struct {
-		Username string `json:"username" required:"true" minLength:"1" doc:"用户名"`
-		Password string `json:"password" required:"true" minLength:"1" doc:"密码"`
+	Body       struct {
+		Username string `json:"username" required:"true" minLength:"1" maxLength:"64" doc:"用户名"`
+		Password string `json:"password" required:"true" minLength:"1" maxLength:"72" doc:"密码"`
 	}
 }
 
 // LoginOutput 登录响应体
 type LoginOutput struct {
 	SetCookie http.Cookie `header:"Set-Cookie"`
-	Body struct {
+	Body      struct {
 		Code    int        `json:"code" example:"0" doc:"状态码"`
 		Message string     `json:"message" example:"success" doc:"响应消息"`
 		Data    *LoginData `json:"data" doc:"登录数据"`
@@ -69,9 +71,9 @@ type LoginOutput struct {
 // RegisterInput 注册请求体
 type RegisterInput struct {
 	Body struct {
-		Username string `json:"username" required:"true" minLength:"2" doc:"用户名"`
-		Password string `json:"password" required:"true" minLength:"6" doc:"密码"`
-		NickName string `json:"nickName" doc:"昵称"`
+		Username string `json:"username" required:"true" minLength:"2" maxLength:"64" doc:"用户名"`
+		Password string `json:"password" required:"true" minLength:"6" maxLength:"72" doc:"密码"`
+		NickName string `json:"nickName" maxLength:"64" doc:"昵称"`
 	}
 }
 
@@ -88,7 +90,7 @@ type RefreshTokenInput struct {
 	CookieOnly    string      `header:"X-Refresh-Cookie-Only"`
 	RequestID     string      `header:"X-Refresh-Request-ID" maxLength:"128"`
 	RefreshCookie http.Cookie `cookie:"nucleagent_refresh"`
-	Body struct {
+	Body          struct {
 		RefreshToken string `json:"refreshToken,omitempty" maxLength:"512" doc:"兼容客户端使用的刷新令牌"`
 	}
 }
@@ -96,14 +98,14 @@ type RefreshTokenInput struct {
 type LogoutInput struct {
 	CookieOnly    string      `header:"X-Refresh-Cookie-Only"`
 	RefreshCookie http.Cookie `cookie:"nucleagent_refresh"`
-	Body struct {
+	Body          struct {
 		RefreshToken string `json:"refreshToken,omitempty" maxLength:"512" doc:"兼容客户端使用的刷新令牌"`
 	}
 }
 
 type LogoutOutput struct {
 	SetCookie http.Cookie `header:"Set-Cookie"`
-	Body struct {
+	Body      struct {
 		Code    int    `json:"code"`
 		Message string `json:"message"`
 	}
@@ -145,8 +147,14 @@ func RegisterRoutes(api huma.API) {
 			return nil, huma.NewError(http.StatusTooManyRequests, "登录尝试过于频繁，请稍后重试")
 		}
 		user, err := userService.Login(input.Body.Username, input.Body.Password)
+		if errors.Is(err, service.ErrInvalidCredentials) {
+			return nil, huma.NewError(http.StatusUnauthorized, "用户名或密码错误")
+		} else if err != nil {
+			return nil, huma.NewError(http.StatusServiceUnavailable, "认证服务暂时不可用")
+		}
+		access, err := service.ResolveAuthorization(ctx, user.ID, user.RoleID)
 		if err != nil {
-			return nil, huma.NewError(http.StatusUnauthorized, err.Error())
+			return nil, huma.NewError(http.StatusServiceUnavailable, "权限服务暂时不可用")
 		}
 
 		refreshToken, familyID, refreshExpiresAt, err := refreshSessionService.IssueWithFamily(user.ID)
@@ -174,11 +182,13 @@ func RegisterRoutes(api huma.API) {
 			ExpiresIn:        jwtService.AccessExpiresIn(),
 			RefreshExpiresIn: refreshSessionService.RefreshExpiresIn(),
 			User: &LoginUserInfo{
-				ID:        user.ID,
-				Username:  user.Username,
-				NickName:  user.NickName,
-				HeaderImg: user.HeaderImg,
-				RoleID:    user.RoleID,
+				ID:          user.ID,
+				Username:    user.Username,
+				NickName:    user.NickName,
+				HeaderImg:   user.HeaderImg,
+				RoleID:      user.RoleID,
+				Roles:       access.Roles,
+				Permissions: access.Permissions,
 			},
 		}
 		return resp, nil
@@ -198,8 +208,12 @@ func RegisterRoutes(api huma.API) {
 			nickName = input.Body.Username
 		}
 		_, err := userService.Register(input.Body.Username, input.Body.Password, nickName, 1)
-		if err != nil {
-			return nil, huma.NewError(http.StatusBadRequest, err.Error())
+		if errors.Is(err, service.ErrInvalidUserInput) {
+			return nil, huma.NewError(http.StatusBadRequest, "注册信息无效")
+		} else if errors.Is(err, service.ErrUsernameExists) {
+			return nil, huma.NewError(http.StatusConflict, "用户名已存在")
+		} else if err != nil {
+			return nil, huma.NewError(http.StatusInternalServerError, "注册服务暂时不可用")
 		}
 		resp := &RegisterOutput{}
 		resp.Body.Code = 0
@@ -236,6 +250,11 @@ func RegisterRoutes(api huma.API) {
 		} else if err != nil {
 			return nil, huma.NewError(http.StatusInternalServerError, "刷新会话暂时不可用")
 		}
+		access, err := service.ResolveAuthorization(ctx, user.ID, user.RoleID)
+		if err != nil {
+			_ = refreshSessionService.Revoke(newRefreshToken)
+			return nil, huma.NewError(http.StatusServiceUnavailable, "权限服务暂时不可用")
+		}
 		newToken, err := jwtService.GenerateSessionToken(
 			user.ID,
 			user.Username,
@@ -256,11 +275,13 @@ func RegisterRoutes(api huma.API) {
 			ExpiresIn:        jwtService.AccessExpiresIn(),
 			RefreshExpiresIn: refreshSessionService.RefreshExpiresIn(),
 			User: &LoginUserInfo{
-				ID:        user.ID,
-				Username:  user.Username,
-				NickName:  user.NickName,
-				HeaderImg: user.HeaderImg,
-				RoleID:    user.RoleID,
+				ID:          user.ID,
+				Username:    user.Username,
+				NickName:    user.NickName,
+				HeaderImg:   user.HeaderImg,
+				RoleID:      user.RoleID,
+				Roles:       access.Roles,
+				Permissions: access.Permissions,
 			},
 		}
 		return resp, nil
@@ -324,23 +345,22 @@ func RegisterRoutes(api huma.API) {
 			return nil, huma.NewError(http.StatusNotFound, "用户不存在")
 		}
 
-		resp := &UserInfoOutput{}
-
-		// 根据 RoleID 映射角色名
-		roles := []string{"user"}
-		if user.RoleID == 999 {
-			roles = []string{"admin"}
+		access, err := service.ResolveAuthorization(ctx, user.ID, user.RoleID)
+		if err != nil {
+			return nil, huma.NewError(http.StatusServiceUnavailable, "权限服务暂时不可用")
 		}
 
+		resp := &UserInfoOutput{}
 		resp.Body.Code = 0
 		resp.Body.Message = "success"
 		resp.Body.Data = &UserInfoData{
-			ID:        user.ID,
-			Username:  user.Username,
-			NickName:  user.NickName,
-			HeaderImg: user.HeaderImg,
-			RoleID:    user.RoleID,
-			Roles:     roles,
+			ID:          user.ID,
+			Username:    user.Username,
+			NickName:    user.NickName,
+			HeaderImg:   user.HeaderImg,
+			RoleID:      user.RoleID,
+			Roles:       access.Roles,
+			Permissions: access.Permissions,
 		}
 		return resp, nil
 	})

@@ -101,6 +101,12 @@ func TestRefreshDoesNotRotateForMissingOrDisabledUser(t *testing.T) {
 	if _, _, _, _, err := service.RotateForActiveUser(token, "rotation-request-0003"); !errors.Is(err, ErrRefreshUserUnavailable) {
 		t.Fatalf("expected disabled user rejection, got %v", err)
 	}
+	if err := global.PRISM_DB.Model(user).Update("enable", 0).Error; err != nil {
+		t.Fatal(err)
+	}
+	if _, _, _, _, err := service.RotateForActiveUser(token, "rotation-request-0003"); !errors.Is(err, ErrRefreshUserUnavailable) {
+		t.Fatalf("expected non-active user rejection, got %v", err)
+	}
 
 	if err := global.PRISM_DB.Model(user).Update("enable", 1).Error; err != nil {
 		t.Fatal(err)
@@ -113,6 +119,10 @@ func TestRefreshDoesNotRotateForMissingOrDisabledUser(t *testing.T) {
 func TestFamilyActivityTracksLogout(t *testing.T) {
 	setupRefreshTestDB(t)
 	service := &RefreshSessionService{}
+	user := &model.User{ID: 14, Username: "session-owner", Enable: 1}
+	if err := global.PRISM_DB.Create(user).Error; err != nil {
+		t.Fatal(err)
+	}
 	token, familyID, _, err := service.IssueWithFamily(14)
 	if err != nil {
 		t.Fatal(err)
@@ -120,6 +130,13 @@ func TestFamilyActivityTracksLogout(t *testing.T) {
 	active, err := service.IsFamilyActive(14, familyID)
 	if err != nil || !active {
 		t.Fatalf("expected issued family to be active, active=%v err=%v", active, err)
+	}
+	if err := global.PRISM_DB.Model(user).Update("enable", 2).Error; err != nil {
+		t.Fatal(err)
+	}
+	active, err = service.IsFamilyActive(14, familyID)
+	if err != nil || active {
+		t.Fatalf("frozen account family must be inactive, active=%v err=%v", active, err)
 	}
 	if err := service.Revoke(token); err != nil {
 		t.Fatal(err)
@@ -195,5 +212,19 @@ func TestRefreshRotationCannotExtendPastFamilyExpiry(t *testing.T) {
 	}
 	if rotatedExpiry.After(familyExpiry) {
 		t.Fatalf("rotation extended beyond family expiry: got %v, cap %v", rotatedExpiry, familyExpiry)
+	}
+}
+
+func TestRefreshMetadataAndIdempotentUnknownRevocation(t *testing.T) {
+	setupRefreshTestDB(t)
+	service := &RefreshSessionService{}
+	if got := service.RefreshExpiresIn(); got != "168h" {
+		t.Fatalf("refresh expiry=%q", got)
+	}
+	if err := service.Revoke("short"); err != nil {
+		t.Fatalf("short unknown token revoke=%v", err)
+	}
+	if err := service.Revoke("unknown-refresh-token-with-at-least-thirty-two-bytes"); err != nil {
+		t.Fatalf("unknown token revoke=%v", err)
 	}
 }

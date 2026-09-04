@@ -1,6 +1,9 @@
 package service
 
 import (
+	"errors"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,7 +15,7 @@ import (
 
 func setupUserTestDB(t *testing.T) {
 	t.Helper()
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{TranslateError: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,6 +85,97 @@ func TestLoginRateSubjectUsesStableUserIDAndCanonicalUnknownName(t *testing.T) {
 	}
 	if composed != decomposed {
 		t.Fatalf("expected equivalent unknown identifiers to share a bucket: %q != %q", composed, decomposed)
+	}
+}
+
+func TestLoginRequiresExplicitlyActiveStatus(t *testing.T) {
+	setupUserTestDB(t)
+	service := &UserService{}
+	for _, status := range []int{0, 2, 3} {
+		user := &model.User{Username: fmt.Sprintf("status-%d", status), Enable: status}
+		if err := user.SetPassword("correct-password"); err != nil {
+			t.Fatal(err)
+		}
+		if err := global.PRISM_DB.Create(user).Error; err != nil {
+			t.Fatal(err)
+		}
+		if err := global.PRISM_DB.Model(user).UpdateColumn("enable", status).Error; err != nil {
+			t.Fatal(err)
+		}
+		if _, err := service.Login(user.Username, "correct-password"); err == nil {
+			t.Fatalf("status %d must not authenticate", status)
+		}
+	}
+	active := &model.User{Username: "active-user", Enable: 1}
+	if err := active.SetPassword("correct-password"); err != nil {
+		t.Fatal(err)
+	}
+	if err := global.PRISM_DB.Create(active).Error; err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.Login(active.Username, "correct-password"); err != nil {
+		t.Fatalf("active user login failed: %v", err)
+	}
+}
+
+func TestLoginDoesNotRevealAccountState(t *testing.T) {
+	setupUserTestDB(t)
+	service := &UserService{}
+	disabled := &model.User{Username: "disabled-user", Enable: 2}
+	if err := disabled.SetPassword("correct-password"); err != nil {
+		t.Fatal(err)
+	}
+	if err := global.PRISM_DB.Create(disabled).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	for _, attempt := range []struct {
+		username string
+		password string
+	}{
+		{username: "missing-user", password: "correct-password"},
+		{username: "disabled-user", password: "correct-password"},
+		{username: "disabled-user", password: "wrong-password"},
+	} {
+		if _, err := service.Login(attempt.username, attempt.password); !errors.Is(err, ErrInvalidCredentials) {
+			t.Fatalf("Login(%q) error = %v, want ErrInvalidCredentials", attempt.username, err)
+		}
+	}
+}
+
+func TestRegisterRejectsOversizedIdentityFields(t *testing.T) {
+	setupUserTestDB(t)
+	service := &UserService{}
+	for _, attempt := range []struct {
+		name     string
+		username string
+		password string
+		nickName string
+	}{
+		{name: "username", username: strings.Repeat("u", 65), password: "password", nickName: "User"},
+		{name: "password", username: "user", password: strings.Repeat("p", 129), nickName: "User"},
+		{name: "nickname", username: "user", password: "password", nickName: strings.Repeat("n", 65)},
+	} {
+		t.Run(attempt.name, func(t *testing.T) {
+			if _, err := service.Register(attempt.username, attempt.password, attempt.nickName, 1); !errors.Is(err, ErrInvalidUserInput) {
+				t.Fatalf("Register() error = %v, want ErrInvalidUserInput", err)
+			}
+		})
+	}
+}
+
+func TestRegisterPersistsUserAndMapsDuplicateUsername(t *testing.T) {
+	setupUserTestDB(t)
+	service := &UserService{}
+	created, err := service.Register("new-user", "secure-password", "New User", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created.ID == 0 || created.Username != "new-user" || !created.CheckPassword("secure-password") {
+		t.Fatalf("unexpected registered user: %#v", created)
+	}
+	if _, err := service.Register("new-user", "another-password", "Duplicate", 1); !errors.Is(err, ErrUsernameExists) {
+		t.Fatalf("duplicate registration error=%v, want ErrUsernameExists", err)
 	}
 }
 
@@ -166,5 +260,33 @@ func TestBootstrapDoesNotTreatOrdinaryAdminNamedUserAsLegacySeed(t *testing.T) {
 	}
 	if ordinary.Enable != 1 {
 		t.Fatal("ordinary account was unexpectedly frozen")
+	}
+}
+
+func TestUserReadAndPasswordChangeContracts(t *testing.T) {
+	setupUserTestDB(t)
+	user := &model.User{UUID: "reader-1", Username: "reader", NickName: "Reader", Enable: 1}
+	if err := user.SetPassword("old-password"); err != nil {
+		t.Fatal(err)
+	}
+	if err := global.PRISM_DB.Create(user).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	service := &UserService{}
+	loaded, err := service.GetUserByID(user.ID)
+	if err != nil || loaded.Username != user.Username {
+		t.Fatalf("loaded=%#v err=%v", loaded, err)
+	}
+	users, total, err := service.GetUserList(1, 10)
+	if err != nil || total != 1 || len(users) != 1 || users[0].ID != user.ID {
+		t.Fatalf("users=%#v total=%d err=%v", users, total, err)
+	}
+	if err := service.ChangePassword(user.ID, "old-password", "new-password"); err != nil {
+		t.Fatal(err)
+	}
+	changed, err := service.GetUserByID(user.ID)
+	if err != nil || !changed.CheckPassword("new-password") || changed.CheckPassword("old-password") {
+		t.Fatalf("password change was not persisted: err=%v", err)
 	}
 }

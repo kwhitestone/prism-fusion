@@ -6,7 +6,7 @@ import type { RouteRecordRaw } from "vue-router";
  * 每个插件可声明自己提供的功能权限点，用于后续 RBAC 管理
  */
 export interface PluginPermission {
-  /** 权限唯一标识，建议格式 "pluginName:action"，如 "example:create" */
+  /** 权限唯一标识，格式 "domain:resource:action"，如 "example:item:create" */
   key: string;
   /** 权限名称（人类可读） */
   name: string;

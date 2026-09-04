@@ -66,7 +66,7 @@ func (s *MenuService) GetAsyncRoutes() ([]MenuNode, error) {
 	}
 
 	// 构建菜单树
-	return buildMenuTree(menus, 0), nil
+	return buildMenuTree(routableMenus(menus), 0), nil
 }
 
 // buildMenuTree 递归构建菜单树
@@ -84,6 +84,9 @@ func buildMenuTree(menus []model.Menu, parentID uint) []MenuNode {
 			Redirect:  m.Redirect,
 			Meta:      make(map[string]interface{}),
 		}
+		if node.Name == "" {
+			node.Name = m.Code
+		}
 
 		node.Meta["title"] = m.Title
 		if m.Icon != "" {
@@ -91,8 +94,12 @@ func buildMenuTree(menus []model.Menu, parentID uint) []MenuNode {
 		}
 		if m.Rank > 0 {
 			node.Meta["rank"] = m.Rank
+		} else if m.Sort > 0 {
+			node.Meta["rank"] = m.Sort
 		}
 		if m.ShowLink != nil && !*m.ShowLink {
+			node.Meta["showLink"] = false
+		} else if m.IsVisible != nil && !*m.IsVisible {
 			node.Meta["showLink"] = false
 		}
 
@@ -125,19 +132,7 @@ func buildMenuTree(menus []model.Menu, parentID uint) []MenuNode {
 
 // SeedData 初始化 RBAC 种子数据
 func SeedData() {
-	db := global.PRISM_DB
-
-	// 初始化角色
-	var roleCount int64
-	db.Model(&model.Role{}).Count(&roleCount)
-	if roleCount == 0 {
-		roles := []model.Role{
-			{RoleID: 1, RoleName: "普通用户", ParentID: 0, DefaultRouter: "dashboard"},
-			{RoleID: 999, RoleName: "超级管理员", ParentID: 0, DefaultRouter: "dashboard"},
-		}
-		for _, r := range roles {
-			db.Create(&r)
-		}
-		global.PRISM_LOG.Info("初始化角色数据完成")
+	if err := SeedRegisteredData(); err != nil && global.PRISM_LOG != nil {
+		global.PRISM_LOG.Error("RBAC seed failed")
 	}
 }

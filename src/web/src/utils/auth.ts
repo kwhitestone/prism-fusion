@@ -1,6 +1,11 @@
 import Cookies from "js-cookie";
 import { useUserStoreHook } from "@/store/modules/user";
 import { storageLocal, isString, isIncludeAllChildren } from "@pureadmin/utils";
+import {
+  invalidateAuthSession,
+  observeAuthSession,
+  withAuthSessionLock
+} from "@/addons/auth/session";
 
 export interface DataInfo<T> {
   /** token */
@@ -9,6 +14,10 @@ export interface DataInfo<T> {
   expires: T;
   /** 用于调用刷新accessToken的接口时所需的token */
   refreshToken: string;
+  /** 当前浏览器登录会话标识，用于阻止跨账号请求串线 */
+  sessionId?: string;
+  /** 当前 refresh token 的稳定轮换请求标识 */
+  refreshRequestId?: string;
   /** 头像 */
   avatar?: string;
   /** 用户名 */
@@ -48,6 +57,12 @@ export function removeAuthToken(): void {
   localStorage.removeItem(AuthTokenKey);
 }
 
+function clearTokenStorage(): void {
+  removeAuthToken();
+  Cookies.remove(multipleTabsKey);
+  storageLocal().removeItem(userKey);
+}
+
 /** 获取token信息 */
 export function getToken(): DataInfo<number> | null {
   const userInfo = storageLocal().getItem<DataInfo<number>>(userKey);
@@ -79,6 +94,8 @@ export function setToken(data: DataInfo<Date>) {
     roles,
     permissions,
     refreshToken,
+    sessionId,
+    refreshRequestId,
     expires
   }) {
     useUserStoreHook().SET_AVATAR(avatar);
@@ -88,6 +105,8 @@ export function setToken(data: DataInfo<Date>) {
     useUserStoreHook().SET_PERMS(permissions);
     storageLocal().setItem(userKey, {
       refreshToken,
+      sessionId,
+      refreshRequestId,
       expires,
       avatar,
       username,
@@ -100,7 +119,7 @@ export function setToken(data: DataInfo<Date>) {
   const expires = new Date(data.expires).getTime();
 
   if (data.username && data.roles) {
-    const { username, roles, refreshToken } = data;
+    const { username, roles, refreshToken, sessionId, refreshRequestId } = data;
     setUserKey({
       avatar: data?.avatar ?? "",
       username,
@@ -108,6 +127,8 @@ export function setToken(data: DataInfo<Date>) {
       roles,
       permissions: data?.permissions ?? [],
       refreshToken,
+      sessionId,
+      refreshRequestId,
       expires
     });
   } else {
@@ -128,16 +149,77 @@ export function setToken(data: DataInfo<Date>) {
       roles,
       permissions,
       refreshToken: data.refreshToken,
+      sessionId: data.sessionId,
+      refreshRequestId: data.refreshRequestId,
       expires
     });
   }
 }
 
 /** 删除`token`以及key值为`user-info`的localStorage信息 */
-export function removeToken() {
-  removeAuthToken();
-  Cookies.remove(multipleTabsKey);
-  storageLocal().removeItem(userKey);
+export function removeToken(onLockedClear?: () => void): Promise<void> {
+  invalidateAuthSession();
+
+  // 与 login/refresh 使用同一把锁，确保凭据不会被分段覆盖。
+  const clear = async () => {
+    invalidateAuthSession();
+    observeAuthSession(undefined);
+    clearTokenStorage();
+    onLockedClear?.();
+  };
+  if (typeof navigator === "undefined" || !navigator.locks) {
+    observeAuthSession(undefined);
+    clearTokenStorage();
+    onLockedClear?.();
+    return Promise.resolve();
+  }
+  return withAuthSessionLock(clear);
+}
+
+/** Clear credentials and visible identity only if no newer session exists. */
+export async function endAuthSessionIfCurrent(
+  expectedSessionId?: string
+): Promise<boolean> {
+  const end = () => {
+    const current = getToken();
+    if (current && current.sessionId !== expectedSessionId) return false;
+    invalidateAuthSession();
+    observeAuthSession(undefined);
+    clearTokenStorage();
+    useUserStoreHook().endSession();
+    return true;
+  };
+  if (typeof navigator === "undefined" || !navigator.locks) {
+    // Built-in auth requires Web Locks, but preserve fail-closed cleanup for
+    // a legacy stored session when the current identity can be checked exactly.
+    return end();
+  }
+  return withAuthSessionLock(async () => end());
+}
+
+/**
+ * Clear credentials only when they still identify the refresh operation that
+ * requested invalidation. The caller must hold the shared auth-session lock
+ * whenever a sessionId is present.
+ */
+export function clearAuthSessionIfMatches(expected: {
+  refreshToken: string;
+  sessionId?: string;
+}): boolean {
+  const current = getToken();
+  if (
+    !current ||
+    current.refreshToken !== expected.refreshToken ||
+    (expected.sessionId !== undefined &&
+      current.sessionId !== expected.sessionId)
+  ) {
+    return false;
+  }
+  invalidateAuthSession();
+  observeAuthSession(undefined);
+  clearTokenStorage();
+  useUserStoreHook().endSession();
+  return true;
 }
 
 /** 是否有按钮级别的权限（根据登录接口返回的`permissions`字段进行判断）*/

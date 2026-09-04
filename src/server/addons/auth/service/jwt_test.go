@@ -52,6 +52,33 @@ func TestSessionJWTCarriesRevocableFamilyID(t *testing.T) {
 	}
 }
 
+func TestJWTPrincipalTypeDistinguishesServicesFromLegacyRoleZeroUsers(t *testing.T) {
+	previous := global.PRISM_CONFIG
+	global.PRISM_CONFIG.JWT = config.JWT{
+		SigningKey:  "test-signing-key-with-sufficient-entropy",
+		ExpiresTime: "15m",
+	}
+	t.Cleanup(func() { global.PRISM_CONFIG = previous })
+
+	serviceToken, err := (&JwtService{}).GenerateToken(7, "core", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	serviceClaims, err := (&JwtService{}).ParseAccessToken(serviceToken)
+	if err != nil || !serviceClaims.IsServicePrincipal() {
+		t.Fatalf("service claims=%#v err=%v", serviceClaims, err)
+	}
+
+	userToken, err := (&JwtService{}).GenerateSessionToken(8, "legacy-user", 0, "family-legacy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	userClaims, err := (&JwtService{}).ParseAccessToken(userToken)
+	if err != nil || userClaims.IsServicePrincipal() {
+		t.Fatalf("role-zero session claims=%#v err=%v", userClaims, err)
+	}
+}
+
 func TestAccessParserRejectsUnexpectedSigningAlgorithm(t *testing.T) {
 	previous := global.PRISM_CONFIG
 	global.PRISM_CONFIG.JWT = config.JWT{SigningKey: "test-signing-key-with-sufficient-entropy"}
@@ -107,5 +134,36 @@ func TestTokenConfigurationRejectsMissingSigningKey(t *testing.T) {
 func TestConfiguredDurationRejectsOverflow(t *testing.T) {
 	if _, err := parseConfiguredDuration("999999999999999999999d"); err == nil {
 		t.Fatal("expected overflowing duration to be rejected")
+	}
+}
+
+func TestJWTAccessMetadataAndRefreshWindow(t *testing.T) {
+	previous := global.PRISM_CONFIG
+	global.PRISM_CONFIG.JWT = config.JWT{
+		SigningKey:  "test-signing-key-with-sufficient-entropy",
+		ExpiresTime: "30m",
+		BufferTime:  "5m",
+	}
+	t.Cleanup(func() { global.PRISM_CONFIG = previous })
+
+	service := &JwtService{}
+	if service.AccessExpiresIn() != "30m" {
+		t.Fatalf("access expiry=%q", service.AccessExpiresIn())
+	}
+	if _, err := service.GenerateSessionToken(1, "alice", 1, ""); err == nil {
+		t.Fatal("empty session ID must be rejected")
+	}
+	if (*Claims)(nil).IsServicePrincipal() {
+		t.Fatal("nil claims cannot be a service principal")
+	}
+	if !service.NeedRefresh(&Claims{RegisteredClaims: jwt.RegisteredClaims{
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
+	}}) {
+		t.Fatal("token inside buffer should refresh")
+	}
+	if service.NeedRefresh(&Claims{RegisteredClaims: jwt.RegisteredClaims{
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+	}}) {
+		t.Fatal("token outside buffer should not refresh")
 	}
 }

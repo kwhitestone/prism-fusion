@@ -9,25 +9,19 @@ import {
 } from "../utils";
 import type { UserResult } from "@/api/user";
 import { useMultiTagsStoreHook } from "./multiTags";
+import { type DataInfo, getToken, removeToken, userKey } from "@/utils/auth";
 import {
-  type DataInfo,
-  setToken,
-  removeToken,
-  userKey,
-  setAuthToken,
-  removeAuthToken
-} from "@/utils/auth";
+  commitAuthSessionResult,
+  currentAuthSessionEpoch,
+  isAuthSessionEpoch,
+  withAuthSessionLock
+} from "@/addons/auth/session";
 
 // 默认头像
 const DEFAULT_AVATAR = new URL("@/assets/avatar.svg", import.meta.url).href;
 
-// 生成随机token（默认 mock 实现）
-function generateRandomToken(): string {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36);
-}
-
 // ========== 策略注入 ==========
-// 登录处理策略（默认为 mock，auth 插件会覆盖为真实后端调用）
+// 登录处理策略默认为关闭；认证插件或业务 provider 必须显式注入。
 type LoginHandler = (data: {
   username: string;
   password: string;
@@ -35,52 +29,40 @@ type LoginHandler = (data: {
 
 type RefreshHandler = (data: {
   refreshToken: string;
-}) => Promise<{ success: boolean; data?: any }>;
+  requestId: string;
+  sessionId: string;
+}) => Promise<{ success: boolean; data?: any; sessionChanged?: boolean }>;
 
 type UserInfoHandler = () => Promise<{
   success: boolean;
   data?: {
     avatar?: string;
     roles?: string[];
+    permissions?: string[];
     nickname?: string;
     username?: string;
   };
 }>;
 
-// 默认 mock 登录
-const defaultLoginHandler: LoginHandler = async data => {
-  const randomToken = generateRandomToken();
-  setAuthToken(randomToken);
-  const tokenData = {
-    avatar: DEFAULT_AVATAR,
-    username: data.username,
-    nickname: data.username,
-    roles: ["admin"],
-    permissions: ["*:*:*"],
-    accessToken: randomToken,
-    refreshToken: randomToken,
-    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-  };
-  setToken(tokenData);
-  return { success: true, data: tokenData } as UserResult;
+type LogoutHandler = (data: { refreshToken: string }) => Promise<void>;
+
+const defaultLoginHandler: LoginHandler = async _data => {
+  return {
+    success: false,
+    message: "未配置认证服务"
+  } as UserResult;
 };
 
-// 默认 mock 刷新
 const defaultRefreshHandler: RefreshHandler = async _data => {
-  const randomToken = generateRandomToken();
-  setAuthToken(randomToken);
-  const tokenData = {
-    accessToken: randomToken,
-    refreshToken: randomToken,
-    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-  };
-  setToken(tokenData as any);
-  return { success: true, data: tokenData };
+  return { success: false };
 };
+
+const defaultLogoutHandler: LogoutHandler = async _data => {};
 
 let _loginHandler: LoginHandler = defaultLoginHandler;
 let _refreshHandler: RefreshHandler = defaultRefreshHandler;
 let _userInfoHandler: UserInfoHandler | null = null;
+let _logoutHandler: LogoutHandler = defaultLogoutHandler;
 
 /** 设置登录处理策略（由 auth 插件调用） */
 export function setLoginHandler(handler: LoginHandler) {
@@ -95,6 +77,11 @@ export function setRefreshHandler(handler: RefreshHandler) {
 /** 设置用户信息获取策略（由 auth 插件调用，用于页面刷新时同步用户信息） */
 export function setUserInfoHandler(handler: UserInfoHandler) {
   _userInfoHandler = handler;
+}
+
+/** 设置服务端会话注销策略（由 auth 插件调用） */
+export function setLogoutHandler(handler: LogoutHandler) {
+  _logoutHandler = handler;
 }
 
 export const useUserStore = defineStore("pure-user", {
@@ -149,8 +136,12 @@ export const useUserStore = defineStore("pure-user", {
           this.SET_AVATAR(res.data.avatar || DEFAULT_AVATAR);
           this.SET_USERNAME(res.data.username || data.username);
           this.SET_NICKNAME(res.data.nickname || data.username);
-          this.SET_ROLES(res.data.roles || ["admin"]);
-          this.SET_PERMS(res.data.permissions || ["*:*:*"]);
+          this.SET_ROLES(
+            Array.isArray(res.data.roles) ? [...res.data.roles] : []
+          );
+          this.SET_PERMS(
+            Array.isArray(res.data.permissions) ? [...res.data.permissions] : []
+          );
         }
 
         return res;
@@ -164,37 +155,69 @@ export const useUserStore = defineStore("pure-user", {
     },
     /** 前端登出 */
     logOut() {
+      const refreshToken = getToken()?.refreshToken;
+      this.endSession();
+      const finalized = removeToken();
+      if (refreshToken) {
+        void finalized
+          .then(() => _logoutHandler({ refreshToken }))
+          .catch(error => console.warn("服务端会话注销失败:", error));
+      }
+    },
+    /** 结束当前 UI 会话；凭据由持有认证锁的调用方清理。 */
+    endSession() {
       this.username = "";
       this.roles = [];
       this.permissions = [];
-      removeToken();
-      removeAuthToken();
       useMultiTagsStoreHook().handleTags("equal", [...routerArrays]);
       resetRouter();
       router.push("/login");
     },
     /** 刷新Token - 通过策略注入实现 */
-    async handRefreshToken(data: { refreshToken: string }) {
+    async handRefreshToken(data: Parameters<RefreshHandler>[0]) {
       return _refreshHandler(data);
     },
     /** 从后端刷新用户信息（头像、角色等），更新 store 和 localStorage */
     async fetchUserInfo() {
       if (!_userInfoHandler) return;
+      const expectedSession = getToken();
+      if (!expectedSession?.sessionId) return;
+      const expectedSessionId = expectedSession.sessionId;
+      const expectedEpoch = currentAuthSessionEpoch();
       try {
         const res = await _userInfoHandler();
         if (res.success && res.data) {
-          if (res.data.avatar) this.SET_AVATAR(res.data.avatar);
-          if (res.data.nickname) this.SET_NICKNAME(res.data.nickname);
-          if (res.data.username) this.SET_USERNAME(res.data.username);
-          if (res.data.roles?.length) this.SET_ROLES(res.data.roles);
-          // 同步到 localStorage
-          const stored =
-            storageLocal().getItem<DataInfo<number>>(userKey) || ({} as any);
-          if (res.data.avatar) stored.avatar = res.data.avatar;
-          if (res.data.nickname) stored.nickname = res.data.nickname;
-          if (res.data.username) stored.username = res.data.username;
-          if (res.data.roles?.length) stored.roles = res.data.roles;
-          storageLocal().setItem(userKey, stored);
+          await commitAuthSessionResult({
+            expectedSessionId,
+            expectedEpoch,
+            withExclusiveLock: withAuthSessionLock,
+            readSessionId: () => getToken()?.sessionId,
+            isEpochCurrent: isAuthSessionEpoch,
+            commit: () => {
+              const stored = storageLocal().getItem<DataInfo<number>>(userKey);
+              if (!stored) return;
+              const roles =
+                res.data?.roles !== undefined ? [...res.data.roles] : undefined;
+              const permissions =
+                res.data?.permissions !== undefined
+                  ? [...res.data.permissions]
+                  : undefined;
+              const nextStored: DataInfo<number> = {
+                ...stored,
+                ...(res.data?.avatar ? { avatar: res.data.avatar } : {}),
+                ...(res.data?.nickname ? { nickname: res.data.nickname } : {}),
+                ...(res.data?.username ? { username: res.data.username } : {}),
+                ...(roles !== undefined ? { roles } : {}),
+                ...(permissions !== undefined ? { permissions } : {})
+              };
+              storageLocal().setItem(userKey, nextStored);
+              if (res.data?.avatar) this.SET_AVATAR(res.data.avatar);
+              if (res.data?.nickname) this.SET_NICKNAME(res.data.nickname);
+              if (res.data?.username) this.SET_USERNAME(res.data.username);
+              if (roles !== undefined) this.SET_ROLES(roles);
+              if (permissions !== undefined) this.SET_PERMS(permissions);
+            }
+          });
         }
       } catch (e) {
         console.warn("fetchUserInfo failed:", e);

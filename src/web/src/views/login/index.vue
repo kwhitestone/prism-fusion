@@ -5,7 +5,7 @@
  * 登录表单区域由认证插件动态注入：
  * - builtin auth → 用户名 + 密码表单
  * - oauth auth → OAuth 登录按钮（含回调处理）
- * - 未注册任何插件 → 显示默认 mock 登录表单
+ * - 未注册任何插件 → 显示 fallback 表单，但认证策略保持关闭
  *
  * 认证插件通过 setLoginComponent() 注册自己的登录组件，
  * 登录页只负责渲染，不关心具体认证方式。
@@ -51,7 +51,7 @@ const footerComponent = computed(
   () => useLoginUIStoreHook().footerComponent || CopyrightFooter
 );
 
-// ========== 以下为默认 fallback 登录（无插件注册时使用） ==========
+// ========== 以下为默认 fallback 表单（无认证策略时会 fail closed） ==========
 const ruleForm = reactive({
   username: "",
   password: ""

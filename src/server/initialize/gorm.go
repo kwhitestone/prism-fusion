@@ -21,7 +21,8 @@ func GormMysql() *gorm.DB {
 
 	dsn := m.Dsn()
 	config := &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
+		Logger:         logger.Default.LogMode(logger.Silent),
+		TranslateError: true,
 	}
 
 	if db, err := gorm.Open(mysql.Open(dsn), config); err != nil {
@@ -51,7 +52,8 @@ func GormSqlite() *gorm.DB {
 	}
 
 	config := &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
+		Logger:         logger.Default.LogMode(logger.Silent),
+		TranslateError: true,
 	}
 
 	if db, err := gorm.Open(sqlite.Dialector{Conn: sqlDB}, config); err != nil {

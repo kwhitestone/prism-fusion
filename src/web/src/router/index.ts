@@ -33,7 +33,8 @@ import {
 import {
   type DataInfo,
   userKey,
-  removeToken,
+  endAuthSessionIfCurrent,
+  getToken,
   multipleTabsKey
 } from "@/utils/auth";
 import { useUserStoreHook } from "@/store/modules/user";
@@ -253,7 +254,7 @@ router.beforeEach((to: ToRouteType, _from, next) => {
       if (whiteList.indexOf(to.path) !== -1) {
         next();
       } else {
-        removeToken();
+        void endAuthSessionIfCurrent(getToken()?.sessionId);
         next({ path: "/login" });
       }
     } else {

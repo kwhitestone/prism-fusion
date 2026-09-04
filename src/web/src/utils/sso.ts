@@ -1,5 +1,11 @@
-import { removeToken, setToken, type DataInfo } from "./auth";
+import { setAuthToken, setToken, type DataInfo } from "./auth";
 import { subBefore, getQueryMap } from "@pureadmin/utils";
+import {
+  createAuthRequestID,
+  invalidateAuthSession,
+  observeAuthSession,
+  withAuthSessionLock
+} from "@/addons/auth/session";
 
 /**
  * 简版前端单点登录，根据实际业务自行编写，平台启动后本地可以跳后面这个链接进行测试 http://localhost:3388/#/permission/page/index?username=sso&roles=admin&accessToken=eyJhbGciOiJIUzUxMiJ9.admin
@@ -10,7 +16,7 @@ import { subBefore, getQueryMap } from "@pureadmin/utils";
  * 3.删除不需要显示在 url 的参数
  * 4.使用 window.location.replace 跳转正确页面
  */
-(function () {
+(async function () {
   // 获取 url 中的参数
   const params = getQueryMap(location.href) as DataInfo<Date>;
   const must = ["username", "roles", "accessToken"];
@@ -33,11 +39,29 @@ import { subBefore, getQueryMap } from "@pureadmin/utils";
   if (sso.length === mustLength) {
     // 判定为单点登录
 
-    // 清空本地旧信息
-    removeToken();
+    const sessionId = createAuthRequestID();
+    const accessToken = String(params.accessToken);
+    const tokenData: DataInfo<Date> = {
+      ...params,
+      accessToken,
+      refreshToken: "",
+      sessionId,
+      refreshRequestId: createAuthRequestID(),
+      expires: new Date(Date.now() + 15 * 60 * 1000),
+      roles: Array.isArray(params.roles)
+        ? [...params.roles]
+        : String(params.roles)
+            .split(",")
+            .map(role => role.trim())
+            .filter(Boolean)
+    };
 
-    // 保存新信息到本地
-    setToken(params);
+    await withAuthSessionLock(async () => {
+      invalidateAuthSession();
+      setAuthToken(`Bearer ${accessToken}`);
+      setToken(tokenData);
+      observeAuthSession(sessionId);
+    });
 
     // 删除不需要显示在 url 的参数
     delete params.roles;

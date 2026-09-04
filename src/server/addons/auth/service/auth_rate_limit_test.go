@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/kwhitestone/prism-fusion/addons/auth/model"
+	"github.com/kwhitestone/prism-fusion/global"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -32,6 +33,34 @@ func TestAuthRateLimitIsSharedByNormalizedAccount(t *testing.T) {
 	}
 	if allowed {
 		t.Fatal("expected the shared account bucket to reject request 4")
+	}
+}
+
+func TestAuthRateLimitValidatesStorageAndInput(t *testing.T) {
+	previousDB := global.PRISM_DB
+	global.PRISM_DB = nil
+	t.Cleanup(func() { global.PRISM_DB = previousDB })
+	limiter := &AuthRateLimitService{}
+	if _, err := limiter.Allow("login-account", "alice", 1); err == nil {
+		t.Fatal("missing rate-limit database must fail closed")
+	}
+
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.AutoMigrate(&model.AuthRateWindow{}); err != nil {
+		t.Fatal(err)
+	}
+	limiter.DB = db
+	if _, err := limiter.AllowAt("", "alice", 1, time.Now()); err == nil {
+		t.Fatal("empty scope must be rejected")
+	}
+	if _, err := limiter.AllowAt("login-account", "", 1, time.Now()); err == nil {
+		t.Fatal("empty subject must be rejected")
+	}
+	if _, err := limiter.AllowAt("login-account", "alice", 0, time.Now()); err == nil {
+		t.Fatal("zero limit must be rejected")
 	}
 }
 

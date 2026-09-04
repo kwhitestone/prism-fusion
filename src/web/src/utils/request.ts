@@ -8,14 +8,29 @@ import type {
 import { ElLoading } from "element-plus";
 import type { LoadingInstance } from "element-plus/es/components/loading/src/loading";
 import { useUserStoreHook } from "@/store/modules/user";
-import { getAuthToken } from "@/utils/auth";
+import {
+  clearAuthSessionIfMatches,
+  endAuthSessionIfCurrent,
+  getAuthToken,
+  getToken
+} from "@/utils/auth";
 import router from "@/router/index";
 import type { BaseResponse } from "@/types";
+import {
+  applyRequestAuthBinding,
+  canRecoverAuthFailure,
+  createRefreshCoordinator,
+  getObservedAuthSession,
+  readAuthBindingWithLock,
+  withAuthSessionLock
+} from "@/addons/auth/session";
 
 // 扩展 AxiosRequestConfig 接口
 declare module "axios" {
   interface AxiosRequestConfig {
     donNotShowLoading?: boolean;
+    authRetry?: boolean;
+    authSessionId?: string;
     loadingOption?: {
       target?: HTMLElement | null;
       text?: string;
@@ -28,6 +43,60 @@ declare module "axios" {
 const service: AxiosInstance = axios.create({
   timeout: 99999
 });
+
+const ACCESS_REFRESH_SKEW_MS = 30 * 1000;
+
+const isAuthRecoveryRequest = (url = ""): boolean =>
+  ["/login", "/register", "/refresh-token", "/logout"].some(path =>
+    url.endsWith(path)
+  );
+
+export const refreshAccessToken = createRefreshCoordinator({
+  readSession: getToken,
+  hasAuthToken: () => Boolean(getAuthToken()),
+  withExclusiveLock: withAuthSessionLock,
+  invalidate: clearAuthSessionIfMatches,
+  rotate: async current => {
+    const result = await useUserStoreHook().handRefreshToken({
+      refreshToken: current.refreshToken,
+      requestId: current.refreshRequestId,
+      sessionId: current.sessionId
+    });
+    if (result.sessionChanged) return "changed";
+    return result.success && result.data ? "ready" : "failed";
+  }
+});
+
+const endInvalidSession = (expectedSessionId?: string): Promise<boolean> =>
+  endAuthSessionIfCurrent(expectedSessionId);
+
+const bindRequestAuthentication = async (
+  config: InternalAxiosRequestConfig
+): Promise<void> => {
+  const binding = await readAuthBindingWithLock({
+    withExclusiveLock: withAuthSessionLock,
+    readSessionId: () => getToken()?.sessionId,
+    readObservedSessionId: () => getObservedAuthSession().sessionId,
+    readAuthToken: getAuthToken
+  });
+  if (binding.action === "reload" && typeof window !== "undefined") {
+    window.location.reload();
+  } else if (binding.action === "end") {
+    // The shared lock is still held by readAuthBindingWithLock only while it
+    // reads; credentials are already absent here, so defer conditional UI and
+    // storage cleanup to the caller's normal invalid-session path.
+    await endInvalidSession(getObservedAuthSession().sessionId);
+  } else if (binding.action === "none") {
+    config.authSessionId = binding.sessionId;
+    if (binding.authToken) {
+      config.headers.set("Authorization", binding.authToken);
+    } else {
+      config.headers.delete("Authorization");
+    }
+    return;
+  }
+  throw new Error("登录会话已在其他标签页变更");
+};
 
 // Loading 状态管理
 let activeAxios = 0;
@@ -145,7 +214,9 @@ const getErrorMessage = (error: AxiosError): string => {
 
 // HTTP请求拦截器
 service.interceptors.request.use(
-  (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
+  async (
+    config: InternalAxiosRequestConfig
+  ): Promise<InternalAxiosRequestConfig> => {
     if (!config.donNotShowLoading) {
       showLoading(config.loadingOption);
     }
@@ -153,13 +224,28 @@ service.interceptors.request.use(
     // 不设置baseURL，让API调用使用完整路径
     // config.baseURL = config.baseURL || import.meta.env.VITE_BASE_API
     const userStore = useUserStoreHook();
-    const authToken = getAuthToken(); // 获取 base64 编码的完整 UC token
+
+    const recoveryRequest = isAuthRecoveryRequest(config.url);
+    if (!recoveryRequest) {
+      const token = getToken();
+      config.authSessionId = token?.sessionId;
+      if (token && token.expires - Date.now() <= ACCESS_REFRESH_SKEW_MS) {
+        const refreshOutcome = await refreshAccessToken(config.authSessionId);
+        if (refreshOutcome !== "ready") {
+          if (refreshOutcome === "failed") {
+            await endInvalidSession(config.authSessionId);
+          }
+          throw new Error("认证会话已过期，请重新登录");
+        }
+      }
+    }
+    await applyRequestAuthBinding({
+      isRecoveryRequest: recoveryRequest,
+      clearAuthorization: () => config.headers.delete("Authorization"),
+      bind: () => bindRequestAuthentication(config)
+    });
 
     config.headers.set("Content-Type", "application/json");
-    // 使用 auth_token 作为 Authorization 头
-    if (authToken) {
-      config.headers.set("Authorization", authToken);
-    }
     // 防御性编码：username 可能含非 ASCII 字符（如中文显示名），
     // HTTP 头要求 ISO-8859-1，直接放中文会导致浏览器抛异常
     config.headers.set(
@@ -215,7 +301,7 @@ service.interceptors.response.use(
 
     return response;
   },
-  (error: AxiosError): Promise<AxiosError> => {
+  async (error: AxiosError): Promise<AxiosResponse> => {
     if (!error.config?.donNotShowLoading) {
       closeLoading();
     }
@@ -238,9 +324,26 @@ service.interceptors.response.use(
 
     if (error.response.status === 401) {
       console.error("❌ 认证错误:", getErrorMessage(error));
-      const userStore = useUserStoreHook();
-      userStore.logOut(); // 使用admin框架的logOut方法
-      router.push({ name: "Login", replace: true });
+      const original = error.config;
+      // Recovery requests own their session transition. In particular, a late
+      // refresh 401 must not invalidate credentials established by another tab.
+      if (isAuthRecoveryRequest(original?.url)) return Promise.reject(error);
+
+      // An anonymous request may finish after a new account logs in. Never
+      // refresh or replay that old request with the replacement identity.
+      if (!canRecoverAuthFailure(original?.authSessionId)) {
+        return Promise.reject(error);
+      }
+
+      if (original && !original.authRetry) {
+        original.authRetry = true;
+        const refreshOutcome = await refreshAccessToken(original.authSessionId);
+        if (refreshOutcome === "ready") {
+          return service.request(original);
+        }
+        if (refreshOutcome === "changed") return Promise.reject(error);
+      }
+      await endInvalidSession(original.authSessionId);
       return Promise.reject(error);
     }
 

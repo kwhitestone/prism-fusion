@@ -16,14 +16,14 @@ jwt:
 
 # 认证配置
 # provider 由注册的插件决定，框架内置支持 builtin
-# 业务项目可通过插件扩展其他 provider（如 oauth）
+# 业务项目可通过插件扩展其他 provider（如 oauth）；此时 rbac 不能使用 builtin
 auth:
   provider: 'builtin'
   serve-routes: true
 
 # 权限控制配置
-# provider 由注册的插件决定，框架内置支持 builtin
-# 业务项目可通过插件扩展其他 provider（如 casbin）
+# builtin: 框架内置控制面；external: 读取业务项目维护的共享表；disabled: 仅保留兼容角色
+# 自定义 provider 必须通过 RegisterAuthorizationResolver 显式注册
 rbac:
   provider: 'builtin'
 

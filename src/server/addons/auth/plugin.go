@@ -46,6 +46,10 @@ func (p *AuthPlugin) RoutePrefix() string {
 	return "/api/v1/addons/auth"
 }
 
+func (p *AuthPlugin) PluginEnabled() bool {
+	return isEnabled()
+}
+
 func (p *AuthPlugin) RegisterRoutes(api huma.API) {
 	if !isEnabled() {
 		return

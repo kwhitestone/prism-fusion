@@ -8,5 +8,5 @@ type Auth struct {
 
 // RBAC 权限控制配置
 type RBAC struct {
-	Provider string `mapstructure:"provider" json:"provider" yaml:"provider"` // "builtin" (默认) 或 "casbin"
+	Provider string `mapstructure:"provider" json:"provider" yaml:"provider"` // "builtin"（控制面）、"external"（共享表消费）、"disabled" 或已注册的自定义 provider
 }

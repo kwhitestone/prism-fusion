@@ -12,7 +12,11 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-const AccessTokenType = "access"
+const (
+	AccessTokenType      = "access"
+	PrincipalTypeUser    = "user"
+	PrincipalTypeService = "service"
+)
 
 // Claims JWT 自定义声明
 type Claims struct {
@@ -20,6 +24,7 @@ type Claims struct {
 	Username  string `json:"username"`
 	RoleID    uint   `json:"roleId"`
 	TokenType string `json:"tokenType,omitempty"`
+	Principal string `json:"principal,omitempty"`
 	SessionID string `json:"sid,omitempty"`
 	jwt.RegisteredClaims
 }
@@ -29,7 +34,11 @@ type JwtService struct{}
 
 // GenerateToken 签发 JWT Token
 func (s *JwtService) GenerateToken(userID uint, username string, roleID uint) (string, error) {
-	return s.generateToken(userID, username, roleID, "")
+	principal := PrincipalTypeUser
+	if roleID == 0 {
+		principal = PrincipalTypeService
+	}
+	return s.generateToken(userID, username, roleID, principal, "")
 }
 
 func (s *JwtService) GenerateSessionToken(
@@ -41,13 +50,14 @@ func (s *JwtService) GenerateSessionToken(
 	if sessionID == "" {
 		return "", errors.New("session ID is required")
 	}
-	return s.generateToken(userID, username, roleID, sessionID)
+	return s.generateToken(userID, username, roleID, PrincipalTypeUser, sessionID)
 }
 
 func (s *JwtService) generateToken(
 	userID uint,
 	username string,
 	roleID uint,
+	principal string,
 	sessionID string,
 ) (string, error) {
 	cfg := global.PRISM_CONFIG.JWT
@@ -60,6 +70,7 @@ func (s *JwtService) generateToken(
 		Username:  username,
 		RoleID:    roleID,
 		TokenType: AccessTokenType,
+		Principal: principal,
 		SessionID: sessionID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiresTime)),
@@ -83,7 +94,20 @@ func (s *JwtService) ParseAccessToken(tokenString string) (*Claims, error) {
 	if claims.TokenType != "" && claims.TokenType != AccessTokenType {
 		return nil, fmt.Errorf("unexpected token type %q", claims.TokenType)
 	}
+	if claims.Principal != "" && claims.Principal != PrincipalTypeUser && claims.Principal != PrincipalTypeService {
+		return nil, fmt.Errorf("unexpected principal type %q", claims.Principal)
+	}
 	return claims, nil
+}
+
+// IsServicePrincipal identifies only explicitly typed service credentials.
+// Untyped legacy JWTs are treated as human sessions and rejected when they do
+// not carry a revocable session ID; role zero alone is never trusted.
+func (c *Claims) IsServicePrincipal() bool {
+	if c == nil {
+		return false
+	}
+	return c.Principal == PrincipalTypeService
 }
 
 // ParseRefreshToken rejects access JWTs at the refresh boundary. New refresh

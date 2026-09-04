@@ -10,9 +10,15 @@ import type {
   PureHttpRequestConfig
 } from "./types.d";
 import { stringify } from "qs";
-import { getToken, getAuthToken } from "@/utils/auth";
-import { useUserStoreHook } from "@/store/modules/user";
+import { endAuthSessionIfCurrent, getToken, getAuthToken } from "@/utils/auth";
 import router from "@/router/index";
+import { refreshAccessToken } from "@/utils/request";
+import {
+  canRecoverAuthFailure,
+  getObservedAuthSession,
+  readAuthBindingWithLock,
+  withAuthSessionLock
+} from "@/addons/auth/session";
 
 // 相关配置请参考：www.axios-js.com/zh-cn/docs/#axios-request-config-1
 const defaultConfig: AxiosRequestConfig = {
@@ -29,35 +35,50 @@ const defaultConfig: AxiosRequestConfig = {
   }
 };
 
+const isAuthRecoveryRequest = (url = ""): boolean =>
+  ["/refresh-token", "/login", "/register", "/logout"].some(path =>
+    url.endsWith(path)
+  );
+
+const endSessionIfCurrent = (expectedSessionId?: string): Promise<boolean> =>
+  endAuthSessionIfCurrent(expectedSessionId);
+
+const bindRequestAuthentication = async (
+  config: PureHttpRequestConfig
+): Promise<void> => {
+  const binding = await readAuthBindingWithLock({
+    withExclusiveLock: withAuthSessionLock,
+    readSessionId: () => getToken()?.sessionId,
+    readObservedSessionId: () => getObservedAuthSession().sessionId,
+    readAuthToken: getAuthToken
+  });
+  if (binding.action === "reload" && typeof window !== "undefined") {
+    window.location.reload();
+  } else if (binding.action === "end") {
+    await endSessionIfCurrent(getObservedAuthSession().sessionId);
+  } else if (binding.action === "none") {
+    config.authSessionId = binding.sessionId;
+    if (binding.authToken) {
+      config.headers!["Authorization"] = binding.authToken;
+    } else if (config.headers) {
+      delete config.headers["Authorization"];
+    }
+    return;
+  }
+  throw new Error("登录会话已在其他标签页变更");
+};
+
 class PureHttp {
   constructor() {
     this.httpInterceptorsRequest();
     this.httpInterceptorsResponse();
   }
 
-  /** `token`过期后，暂存待执行的请求 */
-  private static requests = [];
-
-  /** 防止重复刷新`token` */
-  private static isRefreshing = false;
-
   /** 初始化配置对象 */
   private static initConfig: PureHttpRequestConfig = {};
 
   /** 保存当前`Axios`实例对象 */
   private static axiosInstance: AxiosInstance = Axios.create(defaultConfig);
-
-  /** 重连原始请求 */
-  private static retryOriginalRequest(config: PureHttpRequestConfig) {
-    return new Promise(resolve => {
-      PureHttp.requests.push((token: string) => {
-        if (token) {
-          config.headers["Authorization"] = token;
-        }
-        resolve(config);
-      });
-    });
-  }
 
   /** 请求拦截 */
   private httpInterceptorsRequest(): void {
@@ -73,47 +94,23 @@ class PureHttp {
           return config;
         }
         /** 请求白名单，放置一些不需要`token`的接口（通过设置请求白名单，防止`token`过期后再请求造成的死循环问题） */
-        const whiteList = ["/refresh-token", "/login"];
-        return whiteList.some(url => config.url.endsWith(url))
-          ? config
-          : new Promise(resolve => {
-              const data = getToken();
-              if (data) {
-                const now = new Date().getTime();
-                const expired = data.expires - now <= 0;
-                if (expired) {
-                  if (!PureHttp.isRefreshing) {
-                    PureHttp.isRefreshing = true;
-                    // token过期刷新
-                    useUserStoreHook()
-                      .handRefreshToken({ refreshToken: data.refreshToken })
-                      .then(res => {
-                        if (res.success && res.data) {
-                          const authToken = getAuthToken();
-                          if (authToken) {
-                            config.headers["Authorization"] = authToken;
-                          }
-                          PureHttp.requests.forEach(cb => cb(authToken));
-                          PureHttp.requests = [];
-                        }
-                      })
-                      .finally(() => {
-                        PureHttp.isRefreshing = false;
-                      });
-                  }
-                  resolve(PureHttp.retryOriginalRequest(config));
-                } else {
-                  // token 未过期，使用 auth_token
-                  const authToken = getAuthToken();
-                  if (authToken) {
-                    config.headers["Authorization"] = authToken;
-                  }
-                  resolve(config);
-                }
-              } else {
-                resolve(config);
-              }
-            });
+        if (isAuthRecoveryRequest(config.url)) {
+          if (config.headers) delete config.headers["Authorization"];
+          return config;
+        }
+        const data = getToken();
+        config.authSessionId = data?.sessionId;
+        if (data && data.expires - Date.now() <= 0) {
+          const outcome = await refreshAccessToken(config.authSessionId);
+          if (outcome !== "ready") {
+            if (outcome === "failed") {
+              await endSessionIfCurrent(config.authSessionId);
+            }
+            throw new Error("认证会话已过期，请重新登录");
+          }
+        }
+        await bindRequestAuthentication(config);
+        return config;
       },
       error => {
         return Promise.reject(error);
@@ -138,7 +135,7 @@ class PureHttp {
         }
         return response.data;
       },
-      (error: PureHttpError) => {
+      async (error: PureHttpError) => {
         const $error = error;
         $error.isCancelRequest = Axios.isCancel($error);
 
@@ -149,10 +146,24 @@ class PureHttp {
 
         const status = $error.response?.status;
 
-        // 401 认证失败 → 登出并跳转登录页
+        // 401 认证失败 → 单飞刷新并重试一次
         if (status === 401) {
-          useUserStoreHook().logOut();
-          router.push({ name: "Login", replace: true });
+          const config = $error.config as PureHttpRequestConfig | undefined;
+          if (isAuthRecoveryRequest(config?.url)) {
+            return Promise.reject($error);
+          }
+          if (!canRecoverAuthFailure(config?.authSessionId)) {
+            return Promise.reject($error);
+          }
+          if (config && !config.authRetry) {
+            config.authRetry = true;
+            const outcome = await refreshAccessToken(config.authSessionId);
+            if (outcome === "ready") {
+              return instance.request(config);
+            }
+            if (outcome === "changed") return Promise.reject($error);
+          }
+          await endSessionIfCurrent(config.authSessionId);
           return Promise.reject($error);
         }
 

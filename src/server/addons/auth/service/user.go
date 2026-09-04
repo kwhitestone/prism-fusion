@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/kwhitestone/prism-fusion/addons/auth/model"
 	"github.com/kwhitestone/prism-fusion/global"
@@ -18,6 +19,18 @@ import (
 
 // UserService 用户服务
 type UserService struct{}
+
+const (
+	usernameMaxRunes      = 64
+	nicknameMaxRunes      = 64
+	bcryptPasswordMaxByte = 72
+)
+
+var (
+	ErrInvalidCredentials = errors.New("invalid username or password")
+	ErrInvalidUserInput   = errors.New("invalid user input")
+	ErrUsernameExists     = errors.New("username already exists")
+)
 
 // LoginRateSubject resolves existing usernames through the same database
 // collation used by Login, then rate-limits by stable user ID. This prevents
@@ -41,17 +54,23 @@ func (s *UserService) LoginRateSubject(username string) (string, error) {
 
 // Login 用户登录
 func (s *UserService) Login(username, password string) (*model.User, error) {
+	if !validUserText(username, 1, usernameMaxRunes) || len(password) == 0 || len(password) > bcryptPasswordMaxByte {
+		return nil, ErrInvalidCredentials
+	}
 	var user model.User
 	if err := global.PRISM_DB.Where("username = ?", username).First(&user).Error; err != nil {
-		return nil, errors.New("用户不存在")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrInvalidCredentials
+		}
+		return nil, err
 	}
 
-	if user.Enable == 2 {
-		return nil, errors.New("用户已被冻结")
+	if user.Enable != 1 {
+		return nil, ErrInvalidCredentials
 	}
 
 	if !user.CheckPassword(password) {
-		return nil, errors.New("密码错误")
+		return nil, ErrInvalidCredentials
 	}
 
 	return &user, nil
@@ -59,13 +78,11 @@ func (s *UserService) Login(username, password string) (*model.User, error) {
 
 // Register 用户注册
 func (s *UserService) Register(username, password, nickName string, roleID uint) (*model.User, error) {
-	// 检查用户名是否已存在
-	var count int64
-	global.PRISM_DB.Model(&model.User{}).Where("username = ?", username).Count(&count)
-	if count > 0 {
-		return nil, errors.New("用户名已存在")
+	if !validUserText(username, 2, usernameMaxRunes) ||
+		!validUserText(nickName, 0, nicknameMaxRunes) ||
+		len(password) < 6 || len(password) > bcryptPasswordMaxByte {
+		return nil, ErrInvalidUserInput
 	}
-
 	user := &model.User{
 		UUID:     uuid.New().String(),
 		Username: username,
@@ -79,6 +96,9 @@ func (s *UserService) Register(username, password, nickName string, roleID uint)
 	}
 
 	if err := global.PRISM_DB.Create(user).Error; err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, ErrUsernameExists
+		}
 		return nil, err
 	}
 
@@ -144,7 +164,7 @@ func (s *UserService) BootstrapAdminFromEnvironment() error {
 		}
 	}
 	if credentialsProvided &&
-		(len(username) < 2 || len(username) > 64 || len(password) < 12 || len(password) > 128) {
+		(len(username) < 2 || len(username) > usernameMaxRunes || len(password) < 12 || len(password) > bcryptPasswordMaxByte) {
 		return errors.New("bootstrap admin username or password does not meet length requirements")
 	}
 	if global.PRISM_DB == nil {
@@ -217,4 +237,12 @@ func (s *UserService) BootstrapAdminFromEnvironment() error {
 		return errors.New("failed to hash bootstrap administrator password")
 	}
 	return global.PRISM_DB.Create(admin).Error
+}
+
+func validUserText(value string, minRunes, maxRunes int) bool {
+	if !utf8.ValidString(value) || value != strings.TrimSpace(value) {
+		return false
+	}
+	length := utf8.RuneCountInString(value)
+	return length >= minRunes && length <= maxRunes
 }

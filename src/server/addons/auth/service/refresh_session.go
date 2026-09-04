@@ -116,7 +116,7 @@ func (s *RefreshSessionService) RotateForActiveUser(
 			}
 			return err
 		}
-		if user.Enable == 2 {
+		if user.Enable != 1 {
 			return ErrRefreshUserUnavailable
 		}
 		return nil
@@ -268,13 +268,15 @@ func (s *RefreshSessionService) IsFamilyActive(
 	now := time.Now()
 	var count int64
 	err := global.PRISM_DB.Model(&model.RefreshSession{}).
+		Joins("JOIN users ON users.id = refresh_sessions.user_id").
 		Where(
-			"user_id = ? AND family_id = ? AND revoked_at IS NULL AND expires_at > ?",
+			"refresh_sessions.user_id = ? AND refresh_sessions.family_id = ? AND refresh_sessions.revoked_at IS NULL AND refresh_sessions.expires_at > ?",
 			userID,
 			familyID,
 			now,
 		).
-		Where("family_expires_at = ? OR family_expires_at > ?", time.Time{}, now).
+		Where("refresh_sessions.family_expires_at = ? OR refresh_sessions.family_expires_at > ?", time.Time{}, now).
+		Where("users.enable = ? AND users.deleted_at IS NULL", 1).
 		Count(&count).Error
 	return count > 0, err
 }

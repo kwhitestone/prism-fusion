@@ -1,7 +1,9 @@
 package initialize
 
 import (
+	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/kwhitestone/prism-fusion/global"
@@ -35,16 +37,18 @@ func Routers() *gin.Engine {
 	Router.Use(middleware.Cors())   // 跨域
 	Router.Use(middleware.Logger()) // 日志
 
-	// 按优先级排序注册插件中间件（优先级小的先执行，保证 auth 在 rbac 之前）
-	sortedPlugins := plugin.Sorted()
+	// 冻结注册窗口并按 V2 依赖拓扑解析；无依赖约束时按优先级和 ID 稳定排序。
+	resolvedPlugins := plugin.MustResolve()
 
 	// 注册插件全局中间件（对所有路由生效）
-	for _, p := range sortedPlugins {
+	for _, resolved := range resolvedPlugins {
+		p := resolved.Plugin
+		pluginID := resolved.Manifest.ID
 		globalMws := p.GlobalMiddlewares()
 		if len(globalMws) > 0 {
 			global.PRISM_LOG.Info("Registering plugin global middlewares",
-				zap.String("plugin", p.Name()),
-				zap.Int("priority", p.Priority()),
+				zap.String("plugin", pluginID),
+				zap.Int("priority", resolved.Priority),
 				zap.Int("count", len(globalMws)),
 			)
 			Router.Use(globalMws...)
@@ -52,18 +56,39 @@ func Routers() *gin.Engine {
 	}
 
 	// 注册插件作用域中间件（自动限定到插件的 RoutePrefix）
-	for _, p := range sortedPlugins {
+	pluginScopes := make(map[string][]string, len(resolvedPlugins))
+	hasScopedMiddlewares := make(map[string]bool, len(resolvedPlugins))
+	scopedMiddlewares := make(map[string][]gin.HandlerFunc, len(resolvedPlugins))
+	for _, resolved := range resolvedPlugins {
+		p := resolved.Plugin
+		pluginID := resolved.Manifest.ID
 		middlewares := p.Middlewares()
+		pluginScopes[pluginID] = resolved.Manifest.RouteScopes
 		if len(middlewares) > 0 {
-			prefix := p.RoutePrefix()
+			scopes := resolved.Manifest.RouteScopes
+			if len(scopes) == 0 {
+				panic(fmt.Errorf("plugin %q has scoped middlewares but no route scopes", pluginID))
+			}
+			hasScopedMiddlewares[pluginID] = true
+			scopedMiddlewares[pluginID] = middlewares
+		}
+	}
+	if err := validateRouteScopeIsolation(pluginScopes, hasScopedMiddlewares); err != nil {
+		panic(err)
+	}
+	for _, resolved := range resolvedPlugins {
+		pluginID := resolved.Manifest.ID
+		middlewares := scopedMiddlewares[pluginID]
+		if len(middlewares) > 0 {
+			scopes := resolved.Manifest.RouteScopes
 			global.PRISM_LOG.Info("Registering plugin scoped middlewares",
-				zap.String("plugin", p.Name()),
-				zap.Int("priority", p.Priority()),
-				zap.String("prefix", prefix),
+				zap.String("plugin", pluginID),
+				zap.Int("priority", resolved.Priority),
+				zap.Strings("scopes", scopes),
 				zap.Int("count", len(middlewares)),
 			)
 			for _, mw := range middlewares {
-				Router.Use(scopeMiddleware(prefix, mw))
+				Router.Use(scopeMiddlewareFor(scopes, mw))
 			}
 		}
 	}
@@ -121,14 +146,25 @@ func Routers() *gin.Engine {
 	router.InitHumaRoutes(api)
 
 	// 自动注册所有插件路由（按优先级排序）
-	for _, p := range sortedPlugins {
+	for _, resolved := range resolvedPlugins {
+		p := resolved.Plugin
+		pluginID := resolved.Manifest.ID
 		global.PRISM_LOG.Info("Registering plugin routes",
-			zap.String("plugin", p.Name()),
-			zap.Int("priority", p.Priority()),
+			zap.String("plugin", pluginID),
+			zap.Int("priority", resolved.Priority),
 		)
+		beforeRoutes := Router.Routes()
 		p.RegisterRoutes(api)
+		if hasScopedMiddlewares[pluginID] {
+			if err := validateAddedPluginRoutes(pluginID, resolved.Manifest.RouteScopes, beforeRoutes, Router.Routes()); err != nil {
+				panic(err)
+			}
+		}
 	}
-	global.PRISM_LOG.Info("Plugin routes registered", zap.Int("count", plugin.Count()))
+	global.PRISM_LOG.Info("Plugin routes registered",
+		zap.Int("activeCount", len(resolvedPlugins)),
+		zap.Int("installedCount", plugin.Count()),
+	)
 
 	// SPA 路由支持 - 除了 /api 路径外，其他路径都返回 index.html
 	Router.NoRoute(func(c *gin.Context) {
@@ -153,11 +189,85 @@ func Routers() *gin.Engine {
 // scopeMiddleware 将中间件限定为仅对指定路径前缀生效
 // 框架自动调用，插件中间件无需自行判断路径
 func scopeMiddleware(prefix string, mw gin.HandlerFunc) gin.HandlerFunc {
+	return scopeMiddlewareFor([]string{prefix}, mw)
+}
+
+func scopeMiddlewareFor(scopes []string, mw gin.HandlerFunc) gin.HandlerFunc {
+	if len(scopes) == 0 {
+		panic("scoped middleware requires at least one route scope")
+	}
+	normalizedScopes := make([]string, 0, len(scopes))
+	for _, scope := range scopes {
+		normalized, err := plugin.NormalizeRouteScope(scope)
+		if err != nil {
+			panic(fmt.Errorf("invalid middleware route scope %q: %w", scope, err))
+		}
+		normalizedScopes = append(normalizedScopes, normalized)
+	}
+
 	return func(c *gin.Context) {
-		if strings.HasPrefix(c.Request.URL.Path, prefix) {
-			mw(c)
-		} else {
-			c.Next()
+		for _, scope := range normalizedScopes {
+			if pathMatchesScope(c.Request.URL.Path, scope) {
+				mw(c)
+				return
+			}
+		}
+		c.Next()
+	}
+}
+
+func pathMatchesScope(requestPath, scope string) bool {
+	return scope == "/" || requestPath == scope || strings.HasPrefix(requestPath, scope+"/")
+}
+
+func validateRouteScopeIsolation(pluginScopes map[string][]string, scopedMiddlewarePlugins map[string]bool) error {
+	pluginIDs := make([]string, 0, len(pluginScopes))
+	for pluginID := range pluginScopes {
+		pluginIDs = append(pluginIDs, pluginID)
+	}
+	sort.Strings(pluginIDs)
+	for _, ownerID := range pluginIDs {
+		if !scopedMiddlewarePlugins[ownerID] {
+			continue
+		}
+		for _, otherID := range pluginIDs {
+			if ownerID == otherID {
+				continue
+			}
+			for _, ownerScope := range pluginScopes[ownerID] {
+				for _, otherScope := range pluginScopes[otherID] {
+					if pathMatchesScope(ownerScope, otherScope) || pathMatchesScope(otherScope, ownerScope) {
+						return fmt.Errorf(
+							"plugin %q scoped middleware scope %q overlaps plugin %q scope %q",
+							ownerID, ownerScope, otherID, otherScope,
+						)
+					}
+				}
+			}
 		}
 	}
+	return nil
+}
+
+func validateAddedPluginRoutes(pluginID string, scopes []string, before, after []gin.RouteInfo) error {
+	existing := make(map[string]struct{}, len(before))
+	for _, route := range before {
+		existing[route.Method+"\x00"+route.Path] = struct{}{}
+	}
+	for _, route := range after {
+		if _, alreadyRegistered := existing[route.Method+"\x00"+route.Path]; alreadyRegistered {
+			continue
+		}
+		inScope := false
+		for _, scope := range scopes {
+			if pathMatchesScope(route.Path, scope) {
+				inScope = true
+				break
+			}
+		}
+		if !inScope {
+			return fmt.Errorf("plugin %q registered %s %s outside route scopes %v", pluginID, route.Method, route.Path, scopes)
+		}
+	}
+	return nil
 }

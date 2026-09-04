@@ -109,9 +109,8 @@ export function useDataThemeChange() {
   }
 
   /** 清空缓存并返回登录页 */
-  function onReset() {
-    removeToken();
-    storageLocal().clear();
+  async function onReset() {
+    await removeToken(() => storageLocal().clear());
     const { Grey, Weak, MultiTagsCache, EpThemeColor, Layout } = getConfig();
     useAppStoreHook().setLayout(Layout);
     setEpThemeColor(EpThemeColor);

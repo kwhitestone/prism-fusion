@@ -7,7 +7,7 @@ import type {
   PluginRegistryPayload
 } from "./types";
 import { constantMenus } from "@/router/index";
-import { http } from "@/utils/http";
+import service from "@/utils/request";
 
 /**
  * 自动扫描 addons 目录下所有插件
@@ -193,7 +193,12 @@ async function reportPluginRegistry(plugins: PluginModule[]) {
   console.log("[Plugin] Reporting registry to backend:", payload);
 
   try {
-    await http.post("/api/v1/system/plugin-registry", { data: payload });
+    await service({
+      url: "/api/v1/system/plugin-registry",
+      method: "post",
+      data: payload,
+      donNotShowLoading: true
+    });
     console.log("[Plugin] Registry reported successfully");
   } catch (error) {
     // 上报失败不影响前端运行

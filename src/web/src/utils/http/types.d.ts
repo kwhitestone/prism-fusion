@@ -25,6 +25,8 @@ export interface PureHttpResponse extends AxiosResponse {
 export interface PureHttpRequestConfig extends AxiosRequestConfig {
   beforeRequestCallback?: (request: PureHttpRequestConfig) => void;
   beforeResponseCallback?: (response: PureHttpResponse) => void;
+  authRetry?: boolean;
+  authSessionId?: string;
 }
 
 export default class PureHttp {

@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc" data-drawio-source="architecture-overview.drawio">
+  <title id="title">Prism Fusion V2.0 整体架构</title>
+  <desc id="desc">业务宿主组合 Prism Fusion 后端与前端运行时，并通过插件注册表、可选 Auth/RBAC addon 和显式数据存储形成模块化单体。</desc>
+  <metadata>Canonical editable draw.io source: architecture-overview.drawio</metadata>
+  <defs>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4f81bd"/></marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#82b366"/></marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#9673a6"/></marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#d79b00"/></marker>
+    <style>
+      text{font-family:Inter,"Noto Sans CJK SC","Microsoft YaHei",Arial,sans-serif;fill:#1f2937}.box{fill:#fff;stroke-width:2}.label{font-size:14px;text-anchor:middle}.small{font-size:12px;text-anchor:middle;fill:#4b5563}.head{font-size:17px;font-weight:700}.container{stroke-width:2}.edge{fill:none;stroke-width:2}.dash{stroke-dasharray:7 6}
+    </style>
+  </defs>
+  <rect width="1600" height="1000" fill="#ffffff"/>
+  <text x="890" y="45" text-anchor="middle" font-size="26" font-weight="700">Prism Fusion V2.0 整体架构</text>
+  <rect x="30" y="410" width="160" height="82" rx="12" fill="#f3f4f6" stroke="#6b7280" stroke-width="2"/>
+  <text x="110" y="443" class="label" font-weight="700">浏览器 / API Client</text><text x="110" y="466" class="small">页面、Token、HTTP 请求</text>
+  <rect x="220" y="80" width="1340" height="180" rx="12" fill="#e8f4f8" stroke="#4f81bd" class="container"/>
+  <path d="M220 114 H1560" stroke="#4f81bd" stroke-width="2"/><text x="245" y="104" class="head">业务宿主（prism-example-site）— 固定版本、选择插件、提供配置与部署</text>
+  <g>
+    <rect x="240" y="132" width="200" height="88" rx="10" class="box" stroke="#4f81bd"/><text x="340" y="158" class="label" font-weight="700">版本边界</text><text x="340" y="181" class="small">git submodule</text><text x="340" y="201" class="small">锁定 framework commit</text>
+    <rect x="490" y="132" width="200" height="88" rx="10" class="box" stroke="#4f81bd"/><text x="590" y="158" class="label" font-weight="700">后端组合入口</text><text x="590" y="181" class="small">blank imports + config</text><text x="590" y="201" class="small">go.work / replace</text>
+    <rect x="740" y="132" width="200" height="88" rx="10" class="box" stroke="#4f81bd"/><text x="840" y="158" class="label" font-weight="700">前端组合入口</text><text x="840" y="181" class="small">registerExternalPlugins</text><text x="840" y="201" class="small">pnpm workspace</text>
+    <rect x="990" y="132" width="220" height="88" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="2"/><text x="1100" y="158" class="label" font-weight="700">业务后端 addons</text><text x="1100" y="181" class="small">V2 example</text><text x="1100" y="201" class="small">V1 compatibility samples</text>
+    <rect x="1260" y="132" width="220" height="88" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="2"/><text x="1370" y="158" class="label" font-weight="700">业务前端 addons</text><text x="1370" y="181" class="small">页面、路由、菜单、权限</text><text x="1370" y="201" class="small">PluginModule</text>
+  </g>
+  <path d="M440 176 H482" class="edge dash" stroke="#4f81bd" marker-end="url(#arrow-blue)"/><path d="M440 190 H732" class="edge dash" stroke="#4f81bd" marker-end="url(#arrow-blue)"/>
+  <rect x="220" y="300" width="1340" height="510" rx="12" fill="#f8fafc" stroke="#64748b" class="container"/>
+  <path d="M220 334 H1560" stroke="#64748b" stroke-width="2"/><text x="245" y="324" class="head">Prism Fusion — 稳定内核 + 可选通用 addons</text>
+  <rect x="240" y="352" width="630" height="420" rx="10" fill="#dae8fc" stroke="#6c8ebf" class="container"/><path d="M240 382 H870" stroke="#6c8ebf" stroke-width="2"/><text x="260" y="374" class="head">后端运行时（Go / in-process）</text>
+  <rect x="900" y="352" width="630" height="420" rx="10" fill="#d5e8d4" stroke="#82b366" class="container"/><path d="M900 382 H1530" stroke="#82b366" stroke-width="2"/><text x="920" y="374" class="head">前端运行时（Vue / 同一 Vite bundle）</text>
+  <g>
+    <rect x="260" y="400" width="170" height="70" rx="9" class="box" stroke="#6c8ebf"/><text x="345" y="428" class="label" font-weight="700">配置与日志</text><text x="345" y="451" class="small">Viper / Zap</text>
+    <rect x="460" y="400" width="180" height="70" rx="9" fill="#fff2cc" stroke="#d6b656" stroke-width="2"/><text x="550" y="424" class="label" font-weight="700">Plugin Registry</text><text x="550" y="446" class="small">V1 兼容 + V2 Manifest</text><text x="550" y="462" class="small">Register / Freeze</text>
+    <rect x="670" y="400" width="180" height="70" rx="9" fill="#fff2cc" stroke="#d6b656" stroke-width="2"/><text x="760" y="424" class="label" font-weight="700">冻结解析图</text><text x="760" y="446" class="small">activation / deps / conflicts</text><text x="760" y="462" class="small">topology + priority + ID</text>
+    <rect x="260" y="510" width="170" height="70" rx="9" class="box" stroke="#6c8ebf"/><text x="345" y="538" class="label" font-weight="700">迁移编排</text><text x="345" y="560" class="small">Before / Auto / After</text>
+    <rect x="460" y="510" width="180" height="70" rx="9" class="box" stroke="#6c8ebf"/><text x="550" y="536" class="label" font-weight="700">Gin + Huma</text><text x="550" y="558" class="small">HTTP / OpenAPI 3.1</text><text x="550" y="574" class="small">ReDoc / Scalar</text>
+    <rect x="670" y="510" width="180" height="70" rx="9" fill="#f8cecc" stroke="#b85450" stroke-width="2"/><text x="760" y="534" class="label" font-weight="700">路由边界守卫</text><text x="760" y="555" class="small">scope isolation</text><text x="760" y="572" class="small">新增路由校验（仅 scoped MW）</text>
+    <rect x="260" y="630" width="170" height="72" rx="9" class="box" stroke="#6c8ebf"/><text x="345" y="659" class="label" font-weight="700">GORM 数据访问</text><text x="345" y="681" class="small">显式选择存储</text>
+    <rect x="460" y="630" width="180" height="78" rx="9" fill="#e1d5e7" stroke="#9673a6" stroke-width="2"/><text x="550" y="656" class="label" font-weight="700">Auth addon</text><text x="550" y="678" class="small">V1 / priority 10</text><text x="550" y="696" class="small">全局 JWT middleware</text>
+    <rect x="670" y="630" width="180" height="78" rx="9" fill="#e1d5e7" stroke="#9673a6" stroke-width="2"/><text x="760" y="656" class="label" font-weight="700">RBAC addon</text><text x="760" y="678" class="small">V2 / requires auth</text><text x="760" y="696" class="small">作用域权限 middleware</text>
+  </g>
+  <g>
+    <rect x="920" y="400" width="170" height="70" rx="9" class="box" stroke="#82b366"/><text x="1005" y="428" class="label" font-weight="700">Vue 应用壳</text><text x="1005" y="451" class="small">Vite / Pinia</text>
+    <rect x="1120" y="400" width="180" height="70" rx="9" fill="#fff2cc" stroke="#d6b656" stroke-width="2"/><text x="1210" y="424" class="label" font-weight="700">Plugin Loader</text><text x="1210" y="446" class="small">内置自动发现</text><text x="1210" y="462" class="small">业务显式注入</text>
+    <rect x="1330" y="400" width="180" height="70" rx="9" fill="#fff2cc" stroke="#d6b656" stroke-width="2"/><text x="1420" y="424" class="label" font-weight="700">PluginModule</text><text x="1420" y="446" class="small">routes / components</text><text x="1420" y="462" class="small">install / setup / destroy</text>
+    <rect x="920" y="510" width="170" height="70" rx="9" class="box" stroke="#82b366"/><text x="1005" y="536" class="label" font-weight="700">Session + HTTP</text><text x="1005" y="558" class="small">Token refresh / epoch</text><text x="1005" y="574" class="small">API envelope</text>
+    <rect x="1120" y="510" width="180" height="70" rx="9" class="box" stroke="#82b366"/><text x="1210" y="538" class="label" font-weight="700">Router + Menu</text><text x="1210" y="560" class="small">静态 / 动态路由</text>
+    <rect x="1330" y="510" width="180" height="70" rx="9" fill="#f8cecc" stroke="#b85450" stroke-width="2"/><text x="1420" y="536" class="label" font-weight="700">UI 权限层</text><text x="1420" y="558" class="small">v-perms / 可见性</text><text x="1420" y="574" class="small">非最终授权边界</text>
+    <rect x="920" y="630" width="170" height="72" rx="9" fill="#e1d5e7" stroke="#9673a6" stroke-width="2"/><text x="1005" y="659" class="label" font-weight="700">框架前端 addons</text><text x="1005" y="681" class="small">import.meta.glob</text>
+    <rect x="1120" y="630" width="180" height="72" rx="9" fill="#e1d5e7" stroke="#9673a6" stroke-width="2"/><text x="1210" y="659" class="label" font-weight="700">业务前端 addons</text><text x="1210" y="681" class="small">显式注入</text>
+    <rect x="1330" y="630" width="180" height="72" rx="9" class="box" stroke="#82b366"/><text x="1420" y="656" class="label" font-weight="700">框架核心上报</text><text x="1420" y="678" class="small">菜单 + 权限声明</text><text x="1420" y="695" class="small">当前仅日志观测</text>
+  </g>
+  <g class="edge">
+    <path d="M590 220 V286 H550 V392" stroke="#4f81bd" marker-end="url(#arrow-blue)"/><path d="M1100 220 V284 H570 V392" stroke="#82b366" marker-end="url(#arrow-green)"/>
+    <path d="M840 220 V280 H1210 V622" stroke="#4f81bd" marker-end="url(#arrow-blue)"/><path d="M1370 220 V284 H1230 V622" stroke="#82b366" marker-end="url(#arrow-green)"/>
+    <path d="M430 435 H452" stroke="#4f81bd" marker-end="url(#arrow-blue)"/><path d="M640 435 H662" stroke="#4f81bd" marker-end="url(#arrow-blue)"/>
+    <path d="M760 470 V490 H345 V502" stroke="#4f81bd" marker-end="url(#arrow-blue)"/><path d="M760 470 V492 H550 V502" stroke="#4f81bd" marker-end="url(#arrow-blue)"/>
+    <path d="M430 545 H452" stroke="#4f81bd" marker-end="url(#arrow-blue)"/><path d="M640 545 H662" stroke="#4f81bd" marker-end="url(#arrow-blue)"/><path d="M345 580 V622" stroke="#4f81bd" marker-end="url(#arrow-blue)"/>
+    <path d="M550 630 V590" stroke="#9673a6" marker-end="url(#arrow-purple)"/><path d="M760 630 V590" stroke="#9673a6" marker-end="url(#arrow-purple)"/><path d="M670 656 H648" stroke="#9673a6" marker-end="url(#arrow-purple)"/><path d="M640 690 H662" stroke="#9673a6" stroke-dasharray="7 6" marker-end="url(#arrow-purple)"/>
+    <path d="M1090 435 H1112" stroke="#82b366" marker-end="url(#arrow-green)"/><path d="M1300 435 H1322" stroke="#82b366" marker-end="url(#arrow-green)"/>
+    <path d="M1005 630 V588" stroke="#9673a6" marker-end="url(#arrow-purple)"/><path d="M1210 630 V478" stroke="#9673a6" marker-end="url(#arrow-purple)"/>
+    <path d="M1420 470 V502" stroke="#82b366" marker-end="url(#arrow-green)"/><path d="M1420 470 V622" stroke="#82b366" marker-end="url(#arrow-green)"/>
+    <path d="M190 440 H205 V340 H890 V435 H912" stroke="#6b7280" marker-end="url(#arrow-green)"/><path d="M190 468 H205 V600 H450 V545 H452" stroke="#6b7280" stroke-dasharray="7 6" marker-end="url(#arrow-blue)"/><path d="M1005 510 V486 H650 V545 H648" stroke="#6b7280" marker-end="url(#arrow-blue)"/>
+  </g>
+  <text x="655" y="646" class="small">requires + 注册</text><text x="655" y="725" class="small">运行时解析</text>
+  <rect x="220" y="850" width="1340" height="130" rx="12" fill="#fff0e6" stroke="#d79b00" class="container"/><path d="M220 880 H1560" stroke="#d79b00" stroke-width="2"/><text x="245" y="872" class="head">运行与持久化边界</text>
+  <g>
+    <path d="M250 917 Q250 900 330 900 Q410 900 410 917 V952 Q410 969 330 969 Q250 969 250 952 Z" fill="#fff" stroke="#d79b00" stroke-width="2"/><ellipse cx="330" cy="917" rx="80" ry="17" fill="#fff" stroke="#d79b00" stroke-width="2"/><text x="330" y="936" class="label" font-weight="700">MySQL</text><text x="330" y="955" class="small">配置即显式选择</text>
+    <path d="M460 917 Q460 900 545 900 Q630 900 630 917 V952 Q630 969 545 969 Q460 969 460 952 Z" fill="#fff" stroke="#d79b00" stroke-width="2"/><ellipse cx="545" cy="917" rx="85" ry="17" fill="#fff" stroke="#d79b00" stroke-width="2"/><text x="545" y="936" class="label" font-weight="700">SQLite</text><text x="545" y="955" class="small">仅未选择 MySQL 时</text>
+    <rect x="690" y="900" width="180" height="68" rx="9" fill="#fff" stroke="#d79b00" stroke-width="2"/><text x="780" y="929" class="label" font-weight="700">静态资源</text><text x="780" y="951" class="small">Go 进程统一服务</text>
+    <rect x="920" y="900" width="210" height="68" rx="9" fill="#fff" stroke="#d79b00" stroke-width="2"/><text x="1025" y="929" class="label" font-weight="700">Docker / Compose / CI</text><text x="1025" y="951" class="small">build + test + smoke</text>
+    <rect x="1180" y="894" width="300" height="80" rx="9" fill="#f5f5f5" stroke="#666" stroke-width="2" stroke-dasharray="7 6"/><text x="1330" y="919" class="label" font-weight="700">V2.0 尚未实现</text><text x="1330" y="941" class="small">通用 provider registry</text><text x="1330" y="959" class="small">Remote Application manifest</text>
+  </g>
+  <path d="M345 702 V885 H330 V892" class="edge" stroke="#d79b00" marker-end="url(#arrow-orange)"/><path d="M345 702 V885 H545 V892" class="edge" stroke="#d79b00" marker-end="url(#arrow-orange)"/><path d="M1005 702 V834 H780 V892" class="edge" stroke="#d79b00" marker-end="url(#arrow-orange)"/>
+  <g><rect x="30" y="805" width="160" height="90" rx="8" fill="#fff" stroke="#9ca3af"/><text x="110" y="829" class="label" font-weight="700">图例</text><line x1="50" y1="850" x2="85" y2="850" stroke="#4f81bd" stroke-width="2"/><text x="133" y="854" class="small">运行/装配</text><line x1="50" y1="875" x2="85" y2="875" stroke="#666" stroke-width="2" stroke-dasharray="7 6"/><text x="133" y="879" class="small">规划/间接</text></g>
+</svg>

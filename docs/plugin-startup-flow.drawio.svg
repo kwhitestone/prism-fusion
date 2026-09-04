@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="700" viewBox="0 0 1900 700" role="img" aria-labelledby="title desc" data-drawio-source="plugin-startup-flow.drawio">
+  <title id="title">Prism Fusion 后端插件启动、解析与冻结流程</title>
+  <desc id="desc">从 Go init 注册、加载配置、解析与冻结插件图，到数据库迁移、路由中间件注册和 HTTP Server 启动的完整流程。</desc>
+  <metadata>Canonical editable draw.io source: plugin-startup-flow.drawio</metadata>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/></marker>
+    <style>
+      text{font-family:Inter,"Noto Sans CJK SC","Microsoft YaHei",Arial,sans-serif;fill:#1f2937}.lane{stroke-width:2}.node{fill:#fff;stroke-width:2}.label{font-size:14px;text-anchor:middle}.small{font-size:12px;text-anchor:middle;fill:#4b5563}.lane-title{font-size:16px;font-weight:700;text-anchor:middle}.edge{fill:none;stroke:#475569;stroke-width:2;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1900" height="700" fill="#fff"/>
+  <text x="950" y="34" text-anchor="middle" font-size="25" font-weight="700">Prism Fusion 后端插件启动、解析与冻结流程</text>
+  <g>
+    <rect x="10" y="50" width="1880" height="145" fill="#f5f5f5" stroke="#6b7280" class="lane"/><rect x="10" y="50" width="110" height="145" fill="#e5e7eb" stroke="#6b7280" class="lane"/><text x="65" y="116" class="lane-title">宿主</text><text x="65" y="138" class="lane-title">配置</text>
+    <rect x="10" y="195" width="1880" height="145" fill="#e8f4f8" stroke="#4f81bd" class="lane"/><rect x="10" y="195" width="110" height="145" fill="#dbeafe" stroke="#4f81bd" class="lane"/><text x="65" y="260" class="lane-title">Plugin</text><text x="65" y="282" class="lane-title">Registry</text>
+    <rect x="10" y="340" width="1880" height="145" fill="#fff0e6" stroke="#d79b00" class="lane"/><rect x="10" y="340" width="110" height="145" fill="#ffedd5" stroke="#d79b00" class="lane"/><text x="65" y="405" class="lane-title">数据</text><text x="65" y="427" class="lane-title">迁移</text>
+    <rect x="10" y="485" width="1880" height="145" fill="#e8f5e9" stroke="#82b366" class="lane"/><rect x="10" y="485" width="110" height="145" fill="#dcfce7" stroke="#82b366" class="lane"/><text x="65" y="550" class="lane-title">HTTP</text><text x="65" y="572" class="lane-title">Runtime</text>
+  </g>
+  <g class="edge">
+    <path d="M190 150 V225"/><path d="M260 267 H292"/><path d="M370 150 V240 H472"/><path d="M440 267 H472"/><path d="M620 267 H652"/><path d="M800 267 H832"/><path d="M980 267 H1012"/>
+    <path d="M370 150 V370 H652"/><path d="M1090 297 V370"/><path d="M800 412 H1012"/><path d="M1160 412 H1192"/><path d="M1340 412 H1372"/>
+    <path d="M1090 297 V515"/><path d="M1450 442 V470 H1090 V507"/><path d="M1160 557 H1192"/><path d="M1340 557 H1372"/><path d="M1520 557 H1552"/><path d="M1700 557 H1765 V150 H1732"/>
+  </g>
+  <g>
+    <rect x="120" y="90" width="140" height="60" rx="9" class="node" stroke="#6b7280"/><text x="190" y="116" class="label" font-weight="700">导入插件包</text><text x="190" y="138" class="small">触发 Go init()</text>
+    <rect x="300" y="90" width="140" height="60" rx="9" class="node" stroke="#6b7280"/><text x="370" y="116" class="label" font-weight="700">加载配置</text><text x="370" y="138" class="small">Viper + env</text>
+    <rect x="1740" y="90" width="120" height="60" rx="9" fill="#d5e8d4" stroke="#82b366" stroke-width="2"/><text x="1800" y="116" class="label" font-weight="700">Server.Run</text><text x="1800" y="138" class="small">监听 HTTP</text>
+    <rect x="120" y="237" width="140" height="60" rx="9" class="node" stroke="#4f81bd"/><text x="190" y="261" class="label" font-weight="700">Register</text><text x="190" y="282" class="small">拒绝非法 / 重复 ID</text>
+    <rect x="300" y="237" width="140" height="60" rx="9" fill="#fff2cc" stroke="#d6b656" stroke-width="2"/><text x="370" y="261" class="label" font-weight="700">解析 Manifest</text><text x="370" y="282" class="small">V1 合成 / V2 校验</text>
+    <rect x="480" y="237" width="140" height="60" rx="9" fill="#fff2cc" stroke="#d6b656" stroke-width="2"/><text x="550" y="259" class="label" font-weight="700">捕获激活状态</text><text x="550" y="280" class="small">排除未启用插件</text>
+    <rect x="660" y="237" width="140" height="60" rx="9" fill="#f8cecc" stroke="#b85450" stroke-width="2"/><text x="730" y="259" class="label" font-weight="700">校验依赖图</text><text x="730" y="280" class="small">missing / conflict / cycle</text>
+    <rect x="840" y="237" width="140" height="60" rx="9" fill="#fff2cc" stroke="#d6b656" stroke-width="2"/><text x="910" y="259" class="label" font-weight="700">拓扑排序</text><text x="910" y="280" class="small">再按 priority + ID</text>
+    <rect x="1020" y="237" width="140" height="60" rx="9" fill="#d5e8d4" stroke="#82b366" stroke-width="2"/><text x="1090" y="259" class="label" font-weight="700">冻结快照</text><text x="1090" y="280" class="small">禁止后续注册</text>
+    <rect x="660" y="382" width="140" height="60" rx="9" class="node" stroke="#d79b00"/><text x="730" y="406" class="label" font-weight="700">选择数据库</text><text x="730" y="427" class="small">MySQL 失败关闭 / SQLite</text>
+    <rect x="1020" y="382" width="140" height="60" rx="9" class="node" stroke="#d79b00"/><text x="1090" y="406" class="label" font-weight="700">BeforeMigrate</text><text x="1090" y="427" class="small">依赖顺序</text>
+    <rect x="1200" y="382" width="140" height="60" rx="9" class="node" stroke="#d79b00"/><text x="1270" y="406" class="label" font-weight="700">AutoMigrate</text><text x="1270" y="427" class="small">GORM Models</text>
+    <rect x="1380" y="382" width="140" height="60" rx="9" class="node" stroke="#d79b00"/><text x="1450" y="406" class="label" font-weight="700">AfterMigrate</text><text x="1450" y="427" class="small">数据迁移</text>
+    <rect x="1020" y="527" width="140" height="60" rx="9" class="node" stroke="#82b366"/><text x="1090" y="551" class="label" font-weight="700">全局中间件</text><text x="1090" y="572" class="small">例如 Auth JWT</text>
+    <rect x="1200" y="527" width="140" height="60" rx="9" class="node" stroke="#82b366"/><text x="1270" y="551" class="label" font-weight="700">作用域中间件</text><text x="1270" y="572" class="small">检查 scope overlap</text>
+    <rect x="1380" y="527" width="140" height="60" rx="9" class="node" stroke="#82b366"/><text x="1450" y="551" class="label" font-weight="700">核心 + Huma 路由</text><text x="1450" y="572" class="small">OpenAPI 3.1</text>
+    <rect x="1560" y="527" width="140" height="60" rx="9" class="node" stroke="#82b366"/><text x="1630" y="548" class="label" font-weight="700">插件路由</text><text x="1630" y="568" class="small">仅 scoped MW 插件</text><text x="1630" y="583" class="small">检查新增路由 scope</text>
+  </g>
+  <g>
+    <text x="190" y="212" class="small">init</text><text x="505" y="222" class="small">配置已加载</text><text x="641" y="255" class="small">active only</text><text x="815" y="255" class="small">有效</text><text x="995" y="255" class="small">稳定顺序</text>
+    <text x="540" y="361" class="small">显式选择</text><text x="930" y="397" class="small">连接成功</text><text x="1127" y="354" class="small">解析顺序</text><text x="1118" y="490" class="small">解析顺序</text><text x="1320" y="475" class="small">迁移完成</text><text x="1725" y="545" class="small">开始监听</text>
+  </g>
+  <rect x="120" y="648" width="1180" height="38" rx="7" fill="#fef2f2" stroke="#b85450"/><text x="710" y="672" class="label">MySQL、插件装配、迁移和路由阶段失败会终止启动；当前 SQLite 打开失败仍可能返回 nil 并继续启动。</text>
+</svg>

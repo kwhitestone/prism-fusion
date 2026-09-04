@@ -1,0 +1,129 @@
+<mxGraphModel adaptiveColors="auto" dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="720" math="0" shadow="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="title" value="Prism Fusion 后端插件启动、解析与冻结流程" style="text;html=1;align=center;verticalAlign=middle;fontSize=24;fontStyle=1;fontColor=#1f2937;" vertex="1" parent="1">
+      <mxGeometry x="0" y="8" width="1880" height="36" as="geometry"/>
+    </mxCell>
+    <mxCell id="lane-host" value="宿主 / 配置" style="swimlane;horizontal=0;startSize=110;fillColor=#f5f5f5;strokeColor=#6b7280;fontColor=#1f2937;fontStyle=1;html=1;" vertex="1" parent="1">
+      <mxGeometry x="0" y="50" width="1880" height="150" as="geometry"/>
+    </mxCell>
+    <mxCell id="host-import" value="导入插件包&lt;br&gt;触发 Go init()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6b7280;fontColor=#1f2937;" vertex="1" parent="lane-host">
+      <mxGeometry x="120" y="45" width="140" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="host-config" value="加载配置&lt;br&gt;Viper + env" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6b7280;fontColor=#1f2937;" vertex="1" parent="lane-host">
+      <mxGeometry x="300" y="45" width="140" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="host-serve" value="Server.Run&lt;br&gt;监听 HTTP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1f2937;fontStyle=1;" vertex="1" parent="lane-host">
+      <mxGeometry x="1740" y="45" width="120" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="lane-registry" value="Plugin Registry" style="swimlane;horizontal=0;startSize=110;fillColor=#e8f4f8;strokeColor=#4f81bd;fontColor=#1f2937;fontStyle=1;html=1;" vertex="1" parent="1">
+      <mxGeometry x="0" y="200" width="1880" height="150" as="geometry"/>
+    </mxCell>
+    <mxCell id="registry-register" value="Register&lt;br&gt;拒绝非法 / 重复 ID" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#4f81bd;fontColor=#1f2937;" vertex="1" parent="lane-registry">
+      <mxGeometry x="120" y="45" width="140" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="registry-manifest" value="解析 Manifest&lt;br&gt;V1 合成 / V2 校验" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1f2937;" vertex="1" parent="lane-registry">
+      <mxGeometry x="300" y="45" width="140" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="registry-activation" value="捕获 PluginEnabled&lt;br&gt;排除未启用插件" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1f2937;" vertex="1" parent="lane-registry">
+      <mxGeometry x="480" y="45" width="140" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="registry-validate" value="校验依赖图&lt;br&gt;missing / conflict / cycle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1f2937;" vertex="1" parent="lane-registry">
+      <mxGeometry x="660" y="45" width="140" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="registry-order" value="拓扑排序&lt;br&gt;再按 priority + ID" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1f2937;" vertex="1" parent="lane-registry">
+      <mxGeometry x="840" y="45" width="140" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="registry-freeze" value="冻结快照&lt;br&gt;禁止后续注册" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1f2937;fontStyle=1;" vertex="1" parent="lane-registry">
+      <mxGeometry x="1020" y="45" width="140" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="lane-storage" value="数据与迁移" style="swimlane;horizontal=0;startSize=110;fillColor=#fff0e6;strokeColor=#d79b00;fontColor=#1f2937;fontStyle=1;html=1;" vertex="1" parent="1">
+      <mxGeometry x="0" y="350" width="1880" height="150" as="geometry"/>
+    </mxCell>
+    <mxCell id="storage-select" value="选择数据库&lt;br&gt;MySQL fail closed / SQLite" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1f2937;" vertex="1" parent="lane-storage">
+      <mxGeometry x="660" y="45" width="140" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="storage-before" value="BeforeMigrate&lt;br&gt;依赖顺序" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1f2937;" vertex="1" parent="lane-storage">
+      <mxGeometry x="1020" y="45" width="140" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="storage-auto" value="GORM AutoMigrate&lt;br&gt;插件 Models" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1f2937;" vertex="1" parent="lane-storage">
+      <mxGeometry x="1200" y="45" width="140" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="storage-after" value="AfterMigrate&lt;br&gt;数据迁移" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1f2937;" vertex="1" parent="lane-storage">
+      <mxGeometry x="1380" y="45" width="140" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="lane-http" value="HTTP Runtime" style="swimlane;horizontal=0;startSize=110;fillColor=#e8f5e9;strokeColor=#82b366;fontColor=#1f2937;fontStyle=1;html=1;" vertex="1" parent="1">
+      <mxGeometry x="0" y="500" width="1880" height="150" as="geometry"/>
+    </mxCell>
+    <mxCell id="http-global" value="全局中间件&lt;br&gt;例如 Auth JWT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1f2937;" vertex="1" parent="lane-http">
+      <mxGeometry x="1020" y="45" width="140" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="http-scoped" value="作用域中间件&lt;br&gt;检查 scope overlap" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1f2937;" vertex="1" parent="lane-http">
+      <mxGeometry x="1200" y="45" width="140" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="http-core" value="核心 + Huma 路由&lt;br&gt;OpenAPI 3.1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1f2937;" vertex="1" parent="lane-http">
+      <mxGeometry x="1380" y="45" width="140" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="http-plugin" value="插件路由&lt;br&gt;仅 scoped MW 插件检查新增路由 scope" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1f2937;" vertex="1" parent="lane-http">
+      <mxGeometry x="1560" y="45" width="140" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-host-register" value="init" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4f81bd;endArrow=classic;" edge="1" source="host-import" target="registry-register" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-register-manifest" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4f81bd;endArrow=classic;" edge="1" source="registry-register" target="registry-manifest" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-config-activation" value="配置已加载" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6b7280;endArrow=classic;" edge="1" source="host-config" target="registry-activation" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-manifest-activation" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#d6b656;endArrow=classic;" edge="1" source="registry-manifest" target="registry-activation" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-activation-validate" value="active only" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#d6b656;endArrow=classic;" edge="1" source="registry-activation" target="registry-validate" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-validate-order" value="有效" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#82b366;endArrow=classic;" edge="1" source="registry-validate" target="registry-order" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-order-freeze" value="稳定顺序" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#82b366;endArrow=classic;" edge="1" source="registry-order" target="registry-freeze" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-config-storage" value="显式选择" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#d79b00;endArrow=classic;" edge="1" source="host-config" target="storage-select" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-freeze-before" value="解析顺序" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#d79b00;endArrow=classic;" edge="1" source="registry-freeze" target="storage-before" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-storage-before" value="连接成功" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#d79b00;endArrow=classic;" edge="1" source="storage-select" target="storage-before" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-before-auto" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#d79b00;endArrow=classic;" edge="1" source="storage-before" target="storage-auto" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-auto-after" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#d79b00;endArrow=classic;" edge="1" source="storage-auto" target="storage-after" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-freeze-http" value="解析顺序" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#82b366;endArrow=classic;" edge="1" source="registry-freeze" target="http-global" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-after-global" value="迁移完成" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#82b366;endArrow=classic;" edge="1" source="storage-after" target="http-global" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-global-scoped" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#82b366;endArrow=classic;" edge="1" source="http-global" target="http-scoped" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-scoped-core" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#82b366;endArrow=classic;" edge="1" source="http-scoped" target="http-core" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-core-plugin" value="依赖顺序" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#82b366;endArrow=classic;" edge="1" source="http-core" target="http-plugin" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-plugin-serve" value="开始监听" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#82b366;endArrow=classic;" edge="1" source="http-plugin" target="host-serve" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="failure-note" value="MySQL、插件装配、迁移和路由阶段失败会终止启动；当前 SQLite 打开失败仍可能返回 nil 并继续启动。" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef2f2;strokeColor=#b85450;fontColor=#7f1d1d;" vertex="1" parent="1">
+      <mxGeometry x="120" y="660" width="1180" height="36" as="geometry"/>
+    </mxCell>
+  </root>
+</mxGraphModel>

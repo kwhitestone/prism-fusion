@@ -230,7 +230,7 @@ func (p *MyPlugin) Manifest() plugin.Manifest {
 
 内置 `rbac` 是首个迁移到 Manifest V2 的插件，并显式声明对 `auth` 的依赖；`auth` 保留为 V1 兼容样本。被配置关闭的依赖不会参与装配，也不能满足其他插件的必需依赖。
 
-完整规则与当前分阶段边界见 [Plugin Specification V2](docs/plugin-spec-v2.md)。
+整体分层、运行时边界与启动流程见 [Architecture Overview](docs/architecture-overview.md)，完整插件规则与当前分阶段边界见 [Plugin Specification V2](docs/plugin-spec-v2.md)。
 
 ### 前端插件
 

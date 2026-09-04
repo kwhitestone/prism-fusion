@@ -34,7 +34,7 @@ COPY src/web/ .
 RUN pnpm run build
 
 # ========== 阶段2: Go后端构建阶段 ==========
-FROM ${REGISTRY}/golang:1.25.5 AS backend-builder
+FROM ${REGISTRY}/golang:1.26.8 AS backend-builder
 
 ENV GO111MODULE=on \
     GOPROXY=https://goproxy.cn,direct \

@@ -70,10 +70,16 @@ func GormSqlite() *gorm.DB {
 // Gorm 初始化数据库并产生数据库全局变量
 // 优先使用MySQL，如果MySQL未配置则使用SQLite
 func Gorm() *gorm.DB {
-	// 优先尝试MySQL
-	if db := GormMysql(); db != nil {
+	// A configured MySQL host is an explicit datastore choice. Connection or
+	// configuration failures must stop startup instead of silently creating a
+	// fresh SQLite authentication domain.
+	if global.PRISM_CONFIG.Mysql.Host != "" {
+		db := GormMysql()
+		if db == nil {
+			panic("configured MySQL database is unavailable")
+		}
 		return db
 	}
-	// 回退到SQLite
+	// SQLite is used only when MySQL was not selected.
 	return GormSqlite()
 }

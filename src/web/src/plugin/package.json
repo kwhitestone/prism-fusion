@@ -1,0 +1,17 @@
+{
+  "name": "@prism-fusion/plugin-runtime",
+  "version": "2.1.0",
+  "private": true,
+  "type": "module",
+  "description": "UI-independent Prism Fusion frontend plugin and remote application contracts",
+  "exports": {
+    ".": "./headless.ts",
+    "./remote": "./remote.ts",
+    "./types": "./types.ts"
+  },
+  "types": "./headless.ts",
+  "peerDependencies": {
+    "vue": "^3.5.0",
+    "vue-router": "^4.6.0"
+  }
+}

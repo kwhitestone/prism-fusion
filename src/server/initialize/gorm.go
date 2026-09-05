@@ -57,6 +57,7 @@ func GormSqlite() *gorm.DB {
 	}
 
 	if db, err := gorm.Open(sqlite.Dialector{Conn: sqlDB}, config); err != nil {
+		_ = sqlDB.Close()
 		global.PRISM_LOG.Error("Failed to connect to SQLite database: " + err.Error())
 		return nil
 	} else {
@@ -81,5 +82,9 @@ func Gorm() *gorm.DB {
 		return db
 	}
 	// SQLite is used only when MySQL was not selected.
-	return GormSqlite()
+	db := GormSqlite()
+	if db == nil && global.PRISM_CONFIG.Sqlite.Path != "" {
+		panic("configured SQLite database is unavailable")
+	}
+	return db
 }

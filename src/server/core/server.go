@@ -8,7 +8,9 @@ import (
 	"github.com/kwhitestone/prism-fusion/initialize"
 )
 
-// RunServer 启动服务器
+// RunServer starts a legacy host whose configuration and migrations were
+// initialized by its caller. It does not run optional addon lifecycle hooks.
+// Deprecated: use RunApplication for validated startup and managed cleanup.
 func RunServer() {
 	// 暂时跳过Redis和MongoDB初始化
 	// if global.PRISM_CONFIG.System.UseRedis {

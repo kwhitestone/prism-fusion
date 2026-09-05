@@ -14,7 +14,7 @@ function cloneData<T>(value: T, seen = new WeakMap<object, unknown>()): T {
   if (value === null || typeof value !== "object") return value;
   if (seen.has(value)) return seen.get(value) as T;
   if (Array.isArray(value)) {
-    const result = [];
+    const result: unknown[] = [];
     seen.set(value, result);
     result.push(...value.map(item => cloneData(item, seen)));
     return result as T;
@@ -260,7 +260,7 @@ function resolvePlugins(plugins: readonly PluginModule[]): PluginModule[] {
     );
     available.sort(
       ([a], [b]) =>
-        (active.get(a).priority ?? 100) - (active.get(b).priority ?? 100) ||
+        (active.get(a)!.priority ?? 100) - (active.get(b)!.priority ?? 100) ||
         (a < b ? -1 : a > b ? 1 : 0)
     );
     if (!available.length)
@@ -268,7 +268,7 @@ function resolvePlugins(plugins: readonly PluginModule[]): PluginModule[] {
         `Plugin dependency cycle: ${[...pending.keys()].sort().join(", ")}`
       );
     const [id] = available[0];
-    result.push(active.get(id));
+    result.push(active.get(id)!);
     pending.delete(id);
   }
   return result;
@@ -327,6 +327,6 @@ export class PluginRegistry {
         this.resolving = false;
       }
     }
-    return this.resolved.map(clonePlugin);
+    return this.resolved!.map(clonePlugin);
   }
 }

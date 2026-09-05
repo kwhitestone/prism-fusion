@@ -1,5 +1,5 @@
 import { createRouterMatcher } from "vue-router";
-import type { App } from "vue";
+import type { App, Component } from "vue";
 import type { Router, RouteRecordRaw } from "vue-router";
 import { clonePlugin, cloneRoutes, PluginRegistry } from "./registry.js";
 import type { PluginModule, PluginStatus } from "./types";
@@ -156,10 +156,10 @@ function nameAnonymousRoutes(plugin: PluginModule): PluginModule {
   };
 }
 
-function preflight(
+export function preflightPluginContributions(
   plugins: PluginModule[],
-  app: PluginApp,
-  router: PluginRouter
+  app: { component(name: string): Component | undefined },
+  router: Pick<PluginRouter, "getRoutes">
 ): PluginModule[] {
   const names = new Set(
     router
@@ -262,7 +262,7 @@ export class PluginRuntime {
     let current: string | undefined;
     try {
       this.assertGeneration(generation);
-      plugins = preflight(this.registry.freeze(), app, router);
+      plugins = preflightPluginContributions(this.registry.freeze(), app, router);
       this.assertGeneration(generation);
       this.statuses = plugins.map(plugin => ({
         name: plugin.name,
@@ -287,7 +287,7 @@ export class PluginRuntime {
         const named = createRouterMatcher(plugin.routes ?? [], {})
           .getRoutes()
           .map(matcher => ({
-            name: matcher.record.name,
+            name: matcher.record.name!,
             path: matcher.record.path
           }));
         this.ownedRoutes = [...this.ownedRoutes, ...named];

@@ -1,6 +1,6 @@
 # Prism Fusion 整体架构
 
-状态：基于 Prism Fusion Plugin Specification V2.0 的当前实现整理。
+状态：基于 V2.1 工作区实现整理；消费者迁移与端到端验收独立记录，不因框架能力存在而自动完成。
 
 ## 1. 架构结论
 
@@ -11,7 +11,8 @@ Prism Fusion 当前采用的是 **模块化单体内核 + 进程内插件图 + �
 - 后端 V2 插件用 Manifest 显式声明身份、依赖、冲突和路由作用域，启动时统一校验、排序、冻结；
 - 前端插件是同一 Vite 构建中的 `PluginModule`，已有独立 V2 注册表、依赖与作用域校验、安装回滚；框架内插件自动发现，业务插件由宿主显式注入；
 - Auth 与 RBAC 是可关闭的框架 addon，不属于框架内核。RBAC 依赖 Auth，并通过领域专用的授权解析器桥接；
-- Remote Application 和通用 Strategy Provider 注册表不属于 V2.0 已实现范围。
+- 独立 Vue 应用可使用无界面插件入口，保留自己的界面与会话策略；
+- Remote Application 使用独立注册表和带来源、实例、协议、能力校验的消息通道；通用 Strategy Provider 注册表仍未实现。
 
 ![Prism Fusion 整体架构](architecture-overview.drawio.svg)
 
@@ -21,7 +22,7 @@ Prism Fusion 当前采用的是 **模块化单体内核 + 进程内插件图 + �
 
 | 边界 | 负责什么 | 不负责什么 |
 | --- | --- | --- |
-| 框架内核 | 配置、日志、数据库接入、HTTP/OpenAPI、插件注册/解析/启动编排、前端壳能力 | 具体业务流程和业务数据模型、完整通用生命周期 |
+| 框架内核 | 配置、日志、数据库接入、HTTP/OpenAPI、插件注册/解析/生命周期、无界面前端运行时、远程应用合同 | 具体业务流程、业务模型、特定产品的导航与会话策略 |
 | 内置 addon | Auth、RBAC 等可选通用能力 | 改变内核合同、隐式接管其他插件路由 |
 | 业务宿主 | 固定框架版本、选择插件、提供配置、组装前后端、部署 | 绕过插件依赖校验或直接修改 submodule |
 | 业务插件 | 自己的模型、迁移、路由、中间件、页面、菜单与权限点 | 修改其他插件状态或依赖未声明的启动顺序 |
@@ -66,9 +67,9 @@ V2.0 Manifest 当前有效字段包括：
 
 当前已经实现的启动阶段是：
 
-`BeforeMigrate -> GORM AutoMigrate -> AfterMigrate -> middleware -> routes -> HTTP serve`
+`配置/日志 -> 数据库 -> Freeze -> 全部 Validate -> 全部 Initialize -> 迁移 -> middleware/routes -> 全部 Start -> 全部 Ready -> HTTP serve`
 
-迁移钩子即使插件没有模型也会执行，可用于数据迁移。通用的 `Validate`、`Initialize`、`Start`、`Ready`、`Stop` 尚未进入合同，因为它们必须与启动回滚、就绪状态聚合和逆序关闭一起设计。
+迁移包含 `BeforeMigrate -> GORM AutoMigrate -> AfterMigrate`，无模型插件也可执行钩子。宿主调用 `core.RunApplication`，不再自己启动业务循环。五个生命周期方法都是可选接口，未扩充既有 `Plugin` / `BasePlugin`。失败、取消或 panic 会触发逆序清理；正常退出先排空 HTTP，再取消 worker、逆序 Stop，最后关闭数据库。Stop 有独立协作式期限，不能强杀不配合的 goroutine，也不自动回滚数据库或外部副作用。Ready 必须检查真实可用性。数据库无关的执行器显式使用 `DisableDatabase`。
 
 ### 3.4 路由与中间件隔离
 
@@ -117,12 +118,18 @@ Auth 和 RBAC 位于 `src/server/addons`，属于可选能力，不是核心代�
 
 前端插件注册信息上报的是框架核心 `/api/v1/system/plugin-registry`，当前仅记录日志用于观测，不写入 RBAC，也不参与权限或菜单种子同步；后端 `RegisterPermissions` / `RegisterMenus` 才是 RBAC 种子来源。通用 HTTP/session 协调位于 core，具体认证 API 留在 Auth addon，避免内核反向依赖 addon。
 
+### 5.1 独立前端与 Remote Application
+
+`@prism-fusion/plugin-runtime` 的 `createPluginHost` 使用同一套注册、预检、回滚与卸载实现，但不加载框架 UI 或全局 router。多个独立子应用各有 host；业务页面、API、状态、监听器仍由各自 addon 拥有。登录清理可恢复已成功安装的路由基线。
+
+`@prism-fusion/plugin-runtime/remote` 的注册表只管理独立应用的入口、固定路由映射和消息能力。iframe 不是进程内 addon。主壳按 Manifest 解析路由，不让服务端菜单改写应用归属。每次加载/重试创建新实例，先 `host:init -> child:ready`，再发送会话和业务消息；每条消息检查 origin、source、协议版本、appId、instanceId 与方向能力。通道不替代业务 payload 校验或服务端授权。
+
 ## 6. 数据、配置与运行时
 
 - 配置由 Viper/YAML/环境变量载入，必须先于插件激活状态冻结；
 - 如果配置了 MySQL，连接或配置失败会终止启动，不会静默切换到 SQLite；
 - 只有未选择 MySQL 时才使用显式配置的 SQLite；
-- 当前 SQLite 打开/连接失败会返回 `nil`，`main` 可能跳过迁移后继续启动，这是现状风险，不应被视为目标行为；
+- SQLite 打开/连接失败同样中止启动，不允许绕过迁移后继续提供服务；
 - HTTP 层由 Gin 承载，Huma 生成 OpenAPI 3.1，并提供 ReDoc/Scalar；
 - API 主路径使用 `{code,message,data}` 信封；
 - Go 进程同时提供 API、健康检查和构建后的前端静态资源；
@@ -156,11 +163,12 @@ Auth 和 RBAC 位于 `src/server/addons`，属于可选能力，不是核心代�
 | 前端路由预检、安装回滚与重置快照 | 已实现；插件自行清理钩子副作用 |
 | 核心/业务代码机械边界 CI | 已实现，共享 TypeScript/Go AST 检查器 |
 | 通用 Strategy Provider 注册表 | 尚未实现 |
-| Remote Application Manifest | 尚未实现 |
-| 后端完整 Start/Ready/Stop 与失败回滚 | 尚未实现 |
+| 无界面前端公共入口 | 已实现；各消费者保留自身界面与会话策略 |
+| Remote Application Manifest | 注册、固定路由归属、协议/实例/能力通道已实现；消费者整合独立验收 |
+| 后端 Validate/Initialize/Start/Ready/Stop 与失败清理 | 已实现；协作式取消与逆序 Stop，不是任意副作用事务 |
 | 依赖版本约束求解 | 尚未实现 |
 
-除表中演进项外，SQLite 初始化也应在后续改为失败关闭，使所有显式选择的数据存储遵循一致的启动语义。
+消费者可使用 submodule 或 `workspace.lock.json` 固定完整提交；共享检查拒绝依赖 checkout 缺失、污染、符号链接或版本不符。每个服务仍须验证其真实配置和业务链路，不能把框架测试当成产品验收。
 
 后续演进应维持三个独立扩展面：Backend Addon、Frontend Addon、Remote Application。通用 provider 也应使用 `domain + providerName` 复合身份和显式选择，不应通过重复插件 ID 覆盖实现。
 
@@ -182,7 +190,19 @@ Auth 和 RBAC 位于 `src/server/addons`，属于可选能力，不是核心代�
 
 ## 10. 本轮验证与已知限制
 
-2026-09-05 本地验证：前端 69 项会话、插件、导航、宿主和 provider 回归通过；另有真实 Element Plus 依赖加载检查。Registry/Runtime/导航模块行覆盖率为 99.23%，架构检查器 17 项测试通过、行覆盖率为 93.43%。后端全量 `go test -race ./...`、`go vet ./...`、`go build ./...` 通过。
+### 10.1 V2.1 框架本地验证（2026-09-05）
+
+本轮框架全量 `go test -race ./...`、`go vet ./...`、`go build ./...` 通过。前端 85 项会话、插件、路由、加载与 provider 测试通过，`pnpm typecheck` 和生产构建通过（1799 modules）。共享架构检查器 22 个回归场景通过，行覆盖率 94.29%；工作区版本/实际绑定检查 11 项通过，包括构建过程改变依赖、同步改写锁文件的拒绝测试。
+
+新构建二进制在隔离 SQLite 上验证了真实 `/health`、未认证 RBAC 拒绝及 SIGTERM 正常退出；不接触消费者现有数据库。图的原生 XML 与 SVG 内嵌可编辑 XML 一致，已检查重复 ID、连线引用和浏览器渲染。依赖审计未发现已知漏洞。
+
+工作区校验同时核对 Go 的有效 module 目录、npm/pnpm 的声明/锁文件/实际安装源，以及 Vue 共享实例。安装、配置加载与测试构建结束后重新核对原始 pin；这不是对任意恶意构建脚本的 OS 隔离。以上仅是框架证据，不表示所有消费者或远程 CI 已通过整体验收。
+
+### 10.2 历史 V2.0 验证记录
+
+以下是上一轮 V2.0 的验证记录，不是本轮 Nucleagent 迁移验收结果。本轮结果见消费者迁移文档，未验证项不得沿用旧结论。
+
+2026-09-05 V2.0 本地验证：前端 69 项会话、插件、导航、宿主和 provider 回归通过；另有真实 Element Plus 依赖加载检查。Registry/Runtime/导航模块行覆盖率为 99.23%，架构检查器 17 项测试通过、行覆盖率为 93.43%。后端全量 `go test -race ./...`、`go vet ./...`、`go build ./...` 通过。
 
 覆盖率不能混用口径：后端 `plugin` 包为 84.2%，`initialize` 包的普通单元统计为 34.0%（独立子进程启动用例不合并到该统计）。这不是全仓达到 80% 覆盖率的声明。
 

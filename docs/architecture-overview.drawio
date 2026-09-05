@@ -1,198 +1,44 @@
-<mxGraphModel adaptiveColors="auto" dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+<mxGraphModel adaptiveColors="auto" pageWidth="1200" pageHeight="870">
   <root>
     <mxCell id="0"/>
     <mxCell id="1" parent="0"/>
-    <mxCell id="title" value="Prism Fusion V2.0 整体架构" style="text;html=1;align=center;verticalAlign=middle;fontSize=24;fontStyle=1;fontColor=#1f2937;" vertex="1" parent="1">
-      <mxGeometry x="220" y="20" width="1340" height="40" as="geometry"/>
-    </mxCell>
-    <mxCell id="client" value="&lt;b&gt;浏览器 / API Client&lt;/b&gt;&lt;br&gt;页面、Token、HTTP 请求" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3f4f6;strokeColor=#6b7280;fontColor=#111827;fontSize=14;" vertex="1" parent="1">
-      <mxGeometry x="30" y="410" width="160" height="80" as="geometry"/>
-    </mxCell>
-    <mxCell id="host" value="业务宿主（prism-example-site）— 固定版本、选择插件、提供配置与部署" style="swimlane;startSize=32;fillColor=#e8f4f8;strokeColor=#4f81bd;fontColor=#1f2937;fontStyle=1;html=1;rounded=1;" vertex="1" parent="1">
-      <mxGeometry x="220" y="80" width="1340" height="180" as="geometry"/>
-    </mxCell>
-    <mxCell id="pin" value="&lt;b&gt;版本边界&lt;/b&gt;&lt;br&gt;git submodule&lt;br&gt;锁定 framework commit" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#4f81bd;fontColor=#1f2937;" vertex="1" parent="host">
-      <mxGeometry x="20" y="52" width="200" height="88" as="geometry"/>
-    </mxCell>
-    <mxCell id="go-compose" value="&lt;b&gt;后端组合入口&lt;/b&gt;&lt;br&gt;blank imports + config&lt;br&gt;go.work / replace" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#4f81bd;fontColor=#1f2937;" vertex="1" parent="host">
-      <mxGeometry x="270" y="52" width="200" height="88" as="geometry"/>
-    </mxCell>
-    <mxCell id="web-compose" value="&lt;b&gt;前端组合入口&lt;/b&gt;&lt;br&gt;registerExternalPlugins&lt;br&gt;pnpm workspace" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#4f81bd;fontColor=#1f2937;" vertex="1" parent="host">
-      <mxGeometry x="520" y="52" width="200" height="88" as="geometry"/>
-    </mxCell>
-    <mxCell id="biz-backend" value="&lt;b&gt;业务后端 addons&lt;/b&gt;&lt;br&gt;V2 example&lt;br&gt;V1 compatibility samples" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1f2937;" vertex="1" parent="host">
-      <mxGeometry x="770" y="52" width="220" height="88" as="geometry"/>
-    </mxCell>
-    <mxCell id="biz-frontend" value="&lt;b&gt;业务前端 addons&lt;/b&gt;&lt;br&gt;页面、路由、菜单&lt;br&gt;权限声明与 UI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1f2937;" vertex="1" parent="host">
-      <mxGeometry x="1040" y="52" width="220" height="88" as="geometry"/>
-    </mxCell>
-    <mxCell id="framework" value="Prism Fusion — 稳定内核 + 可选通用 addons" style="swimlane;startSize=32;fillColor=#f8fafc;strokeColor=#64748b;fontColor=#1f2937;fontStyle=1;html=1;rounded=1;" vertex="1" parent="1">
-      <mxGeometry x="220" y="300" width="1340" height="510" as="geometry"/>
-    </mxCell>
-    <mxCell id="backend" value="后端运行时（Go / in-process）" style="swimlane;startSize=28;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1f2937;fontStyle=1;html=1;rounded=1;" vertex="1" parent="framework">
-      <mxGeometry x="20" y="52" width="630" height="420" as="geometry"/>
-    </mxCell>
-    <mxCell id="config" value="&lt;b&gt;配置与日志&lt;/b&gt;&lt;br&gt;Viper / Zap" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1f2937;" vertex="1" parent="backend">
-      <mxGeometry x="20" y="48" width="170" height="70" as="geometry"/>
-    </mxCell>
-    <mxCell id="registry" value="&lt;b&gt;Plugin Registry&lt;/b&gt;&lt;br&gt;V1 兼容 + V2 Manifest&lt;br&gt;Register / Freeze" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1f2937;fontStyle=1;" vertex="1" parent="backend">
-      <mxGeometry x="220" y="48" width="180" height="70" as="geometry"/>
-    </mxCell>
-    <mxCell id="resolution" value="&lt;b&gt;冻结解析图&lt;/b&gt;&lt;br&gt;activation / deps / conflicts&lt;br&gt;topology + priority + ID" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1f2937;" vertex="1" parent="backend">
-      <mxGeometry x="430" y="48" width="180" height="70" as="geometry"/>
-    </mxCell>
-    <mxCell id="migration" value="&lt;b&gt;迁移编排&lt;/b&gt;&lt;br&gt;Before / AutoMigrate / After" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1f2937;" vertex="1" parent="backend">
-      <mxGeometry x="20" y="158" width="170" height="70" as="geometry"/>
-    </mxCell>
-    <mxCell id="http" value="&lt;b&gt;Gin + Huma&lt;/b&gt;&lt;br&gt;HTTP / OpenAPI 3.1&lt;br&gt;ReDoc / Scalar" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1f2937;" vertex="1" parent="backend">
-      <mxGeometry x="220" y="158" width="180" height="70" as="geometry"/>
-    </mxCell>
-    <mxCell id="route-guard" value="&lt;b&gt;路由边界守卫&lt;/b&gt;&lt;br&gt;scope isolation&lt;br&gt;所有插件路由归属校验" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1f2937;" vertex="1" parent="backend">
-      <mxGeometry x="430" y="158" width="180" height="70" as="geometry"/>
-    </mxCell>
-    <mxCell id="gorm" value="&lt;b&gt;GORM 数据访问&lt;/b&gt;&lt;br&gt;显式选择存储" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1f2937;" vertex="1" parent="backend">
-      <mxGeometry x="20" y="278" width="170" height="70" as="geometry"/>
-    </mxCell>
-    <mxCell id="auth" value="&lt;b&gt;Auth addon&lt;/b&gt;&lt;br&gt;V2 / priority 10&lt;br&gt;全局 JWT middleware" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1f2937;" vertex="1" parent="backend">
-      <mxGeometry x="220" y="278" width="180" height="78" as="geometry"/>
-    </mxCell>
-    <mxCell id="rbac" value="&lt;b&gt;RBAC addon&lt;/b&gt;&lt;br&gt;V2 / requires auth&lt;br&gt;作用域权限 middleware" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1f2937;" vertex="1" parent="backend">
-      <mxGeometry x="430" y="278" width="180" height="78" as="geometry"/>
-    </mxCell>
-    <mxCell id="frontend" value="前端运行时（Vue / 同一 Vite bundle）" style="swimlane;startSize=28;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1f2937;fontStyle=1;html=1;rounded=1;" vertex="1" parent="framework">
-      <mxGeometry x="680" y="52" width="630" height="420" as="geometry"/>
-    </mxCell>
-    <mxCell id="vue-shell" value="&lt;b&gt;Vue 应用壳&lt;/b&gt;&lt;br&gt;Vite / Pinia" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1f2937;" vertex="1" parent="frontend">
-      <mxGeometry x="20" y="48" width="170" height="70" as="geometry"/>
-    </mxCell>
-    <mxCell id="web-loader" value="&lt;b&gt;Plugin Registry&lt;/b&gt;&lt;br&gt;V2 依赖 / 冻结&lt;br&gt;预检 / 安装回滚" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1f2937;fontStyle=1;" vertex="1" parent="frontend">
-      <mxGeometry x="220" y="48" width="180" height="70" as="geometry"/>
-    </mxCell>
-    <mxCell id="plugin-module" value="&lt;b&gt;PluginModule&lt;/b&gt;&lt;br&gt;routes / components&lt;br&gt;install / setup / destroy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1f2937;" vertex="1" parent="frontend">
-      <mxGeometry x="430" y="48" width="180" height="70" as="geometry"/>
-    </mxCell>
-    <mxCell id="session-http" value="&lt;b&gt;Session + HTTP&lt;/b&gt;&lt;br&gt;Token refresh / epoch&lt;br&gt;API envelope" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1f2937;" vertex="1" parent="frontend">
-      <mxGeometry x="20" y="158" width="170" height="70" as="geometry"/>
-    </mxCell>
-    <mxCell id="router-menu" value="&lt;b&gt;Router + Menu&lt;/b&gt;&lt;br&gt;插件快照 / 菜单元数据" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1f2937;" vertex="1" parent="frontend">
-      <mxGeometry x="220" y="158" width="180" height="70" as="geometry"/>
-    </mxCell>
-    <mxCell id="ui-perms" value="&lt;b&gt;UI 权限层&lt;/b&gt;&lt;br&gt;v-perms / 可见性&lt;br&gt;非最终授权边界" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1f2937;" vertex="1" parent="frontend">
-      <mxGeometry x="430" y="158" width="180" height="70" as="geometry"/>
-    </mxCell>
-    <mxCell id="builtin-web" value="&lt;b&gt;框架前端 addons&lt;/b&gt;&lt;br&gt;import.meta.glob" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1f2937;" vertex="1" parent="frontend">
-      <mxGeometry x="20" y="278" width="170" height="70" as="geometry"/>
-    </mxCell>
-    <mxCell id="external-web" value="&lt;b&gt;业务前端 addons&lt;/b&gt;&lt;br&gt;registerExternalPlugins" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1f2937;" vertex="1" parent="frontend">
-      <mxGeometry x="220" y="278" width="180" height="70" as="geometry"/>
-    </mxCell>
-    <mxCell id="registry-report" value="&lt;b&gt;框架核心上报&lt;/b&gt;&lt;br&gt;菜单 + 权限声明&lt;br&gt;当前仅日志观测" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1f2937;" vertex="1" parent="frontend">
-      <mxGeometry x="430" y="278" width="180" height="70" as="geometry"/>
-    </mxCell>
-    <mxCell id="infra" value="运行与持久化边界" style="swimlane;startSize=28;fillColor=#fff0e6;strokeColor=#d79b00;fontColor=#1f2937;fontStyle=1;html=1;rounded=1;" vertex="1" parent="1">
-      <mxGeometry x="220" y="850" width="1340" height="130" as="geometry"/>
-    </mxCell>
-    <mxCell id="mysql" value="MySQL&lt;br&gt;配置即显式选择" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1f2937;" vertex="1" parent="infra">
-      <mxGeometry x="30" y="42" width="160" height="66" as="geometry"/>
-    </mxCell>
-    <mxCell id="sqlite" value="SQLite&lt;br&gt;仅未选择 MySQL 时" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1f2937;" vertex="1" parent="infra">
-      <mxGeometry x="240" y="42" width="170" height="66" as="geometry"/>
-    </mxCell>
-    <mxCell id="static" value="静态资源&lt;br&gt;Go 进程统一服务" style="shape=mxgraph.flowchart.document;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1f2937;" vertex="1" parent="infra">
-      <mxGeometry x="470" y="42" width="170" height="66" as="geometry"/>
-    </mxCell>
-    <mxCell id="delivery" value="Docker / Compose / CI&lt;br&gt;AST guard + test + smoke" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1f2937;" vertex="1" parent="infra">
-      <mxGeometry x="700" y="42" width="200" height="66" as="geometry"/>
-    </mxCell>
-    <mxCell id="future" value="&lt;b&gt;V2.0 尚未实现&lt;/b&gt;&lt;br&gt;通用 provider registry&lt;br&gt;Remote Application manifest" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#4b5563;" vertex="1" parent="infra">
-      <mxGeometry x="960" y="36" width="300" height="78" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-pin-go" value="固定版本" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;strokeColor=#4f81bd;endArrow=classic;" edge="1" source="pin" target="go-compose" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-pin-web" value="固定版本" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;strokeColor=#4f81bd;endArrow=classic;" edge="1" source="pin" target="web-compose" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-go-registry" value="导入注册" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4f81bd;endArrow=classic;" edge="1" source="go-compose" target="registry" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-biz-registry" value="V1 / V2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#82b366;endArrow=classic;" edge="1" source="biz-backend" target="registry" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-web-external" value="显式注入" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4f81bd;endArrow=classic;" edge="1" source="web-compose" target="external-web" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-biz-external" value="PluginModule" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#82b366;endArrow=classic;" edge="1" source="biz-frontend" target="external-web" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-config-resolution" value="激活配置" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6c8ebf;endArrow=classic;" edge="1" source="config" target="resolution" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-registry-resolution" value="解析并冻结" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#d6b656;endArrow=classic;" edge="1" source="registry" target="resolution" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-resolution-migration" value="同一顺序" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6c8ebf;endArrow=classic;" edge="1" source="resolution" target="migration" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-resolution-http" value="同一顺序" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6c8ebf;endArrow=classic;" edge="1" source="resolution" target="http" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-migration-gorm" value="models + hooks" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6c8ebf;endArrow=classic;" edge="1" source="migration" target="gorm" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-http-guard" value="路由注册" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#b85450;endArrow=classic;" edge="1" source="http" target="route-guard" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-auth-http" value="全局 JWT" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#9673a6;endArrow=classic;" edge="1" source="auth" target="http" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-rbac-guard" value="作用域授权" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#9673a6;endArrow=classic;" edge="1" source="rbac" target="route-guard" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-rbac-auth" value="requires + 注册 resolver" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#9673a6;endArrow=classic;" edge="1" source="rbac" target="auth" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-auth-rbac" value="运行时解析" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;strokeColor=#9673a6;endArrow=classic;" edge="1" source="auth" target="rbac" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-loader-module" value="安装" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#d6b656;endArrow=classic;" edge="1" source="web-loader" target="plugin-module" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-builtin-loader" value="自动发现" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#9673a6;endArrow=classic;" edge="1" source="builtin-web" target="web-loader" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-external-loader" value="显式注入" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#9673a6;endArrow=classic;" edge="1" source="external-web" target="web-loader" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-module-router" value="routes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#82b366;endArrow=classic;" edge="1" source="plugin-module" target="router-menu" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-module-perms" value="permissions" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#b85450;endArrow=classic;" edge="1" source="plugin-module" target="ui-perms" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-module-report" value="日志观测" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#82b366;endArrow=classic;" edge="1" source="plugin-module" target="registry-report" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-client-vue" value="页面" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;endArrow=classic;" edge="1" source="client" target="vue-shell" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-vue-session" value="会话" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#82b366;endArrow=classic;" edge="1" source="vue-shell" target="session-http" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-session-http" value="API" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;endArrow=classic;" edge="1" source="session-http" target="http" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-client-http" value="直接 API" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;strokeColor=#64748b;endArrow=classic;" edge="1" source="client" target="http" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-gorm-mysql" value="已配置则必须成功" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#d79b00;endArrow=classic;" edge="1" source="gorm" target="mysql" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-gorm-sqlite" value="未选择 MySQL" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#d79b00;endArrow=classic;" edge="1" source="gorm" target="sqlite" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
-    <mxCell id="e-vue-static" value="构建产物" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#d79b00;endArrow=classic;" edge="1" source="vue-shell" target="static" parent="1">
-      <mxGeometry relative="1" as="geometry"/>
-    </mxCell>
+    <mxCell id="title" value="Prism Fusion V2.1：三个独立扩展面" style="text;html=1;fontSize=24;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="0" y="0" width="1200" height="50" as="geometry"/></mxCell>
+    <mxCell id="lane-0" value="组合宿主" style="swimlane;horizontal=0;startSize=110;whiteSpace=wrap;html=1;fillColor=#eef4fb;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="1"><mxGeometry x="0" y="60" width="1200" height="150" as="geometry"/></mxCell>
+    <mxCell id="pin" value="固定框架提交&#xa;submodule / lock" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-0"><mxGeometry x="120" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="goentry" value="Go 组合入口&#xa;RunApplication" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-0"><mxGeometry x="300" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="webentry" value="Vue 组合入口&#xa;createPluginHost" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-0"><mxGeometry x="480" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="remoteentry" value="远程应用清单&#xa;明确路由与消息能力" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-0"><mxGeometry x="660" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="config" value="产品配置 / 部署&#xa;不承载业务实现" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-0"><mxGeometry x="840" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="lane-1" value="后端&#xa;进程内插件" style="swimlane;horizontal=0;startSize=110;whiteSpace=wrap;html=1;fillColor=#e8f4f8;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="1"><mxGeometry x="0" y="210" width="1200" height="150" as="geometry"/></mxCell>
+    <mxCell id="goreg" value="Backend Registry&#xa;身份 / 依赖 / 冻结" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-1"><mxGeometry x="120" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="lifecycle" value="生命周期编排&#xa;迁移 / Ready / Stop" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-1"><mxGeometry x="300" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="goaddon" value="业务 addon&#xa;模型 / API / worker" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-1"><mxGeometry x="480" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="auth" value="可选 Auth / RBAC&#xa;依赖与授权合同" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-1"><mxGeometry x="660" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="gocore" value="稳定内核&#xa;配置 / DB / HTTP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-1"><mxGeometry x="840" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="lane-2" value="前端&#xa;进程内插件" style="swimlane;horizontal=0;startSize=110;whiteSpace=wrap;html=1;fillColor=#e8f5e9;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="1"><mxGeometry x="0" y="360" width="1200" height="150" as="geometry"/></mxCell>
+    <mxCell id="webreg" value="Frontend Registry&#xa;作用域 / 冻结" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-2"><mxGeometry x="120" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="weblife" value="安装预检与回滚&#xa;卸载 / 路由基线" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-2"><mxGeometry x="300" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="webaddon" value="业务 addon&#xa;页面 / API / 状态" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-2"><mxGeometry x="480" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="headless" value="无界面公共入口&#xa;不强制框架 UI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-2"><mxGeometry x="660" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="vue" value="同一 Vue / Router&#xa;同一 Vite 构建" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-2"><mxGeometry x="840" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="lane-3" value="远程应用&#xa;独立 iframe" style="swimlane;horizontal=0;startSize=110;whiteSpace=wrap;html=1;fillColor=#fff0e6;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="1"><mxGeometry x="0" y="510" width="1200" height="150" as="geometry"/></mxCell>
+    <mxCell id="remotereg" value="独立 Remote Registry&#xa;固定应用与路由归属" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-3"><mxGeometry x="120" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="channel" value="主壳通道&#xa;实例握手 / 等待就绪" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-3"><mxGeometry x="300" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="iframe" value="独立子应用&#xa;自己的前端插件 host" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-3"><mxGeometry x="480" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="trust" value="消息边界&#xa;来源 / 实例 / 能力" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-3"><mxGeometry x="660" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="payload" value="业务 payload 校验&#xa;服务端最终授权" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-3"><mxGeometry x="840" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="lane-4" value="交付边界" style="swimlane;horizontal=0;startSize=110;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="1"><mxGeometry x="0" y="660" width="1200" height="150" as="geometry"/></mxCell>
+    <mxCell id="guard" value="共享 AST 检查&#xa;精确核心源码清单" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-4"><mxGeometry x="120" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="tests" value="真实组合测试&#xa;race / type / build" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-4"><mxGeometry x="300" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="e2e" value="消费者端到端验收&#xa;不以框架测试代替" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-4"><mxGeometry x="480" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="provider" value="领域 Provider 独立&#xa;通用注册表尚未实现" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-4"><mxGeometry x="660" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="limits" value="可信进程内扩展&#xa;不是安全沙箱" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="lane-4"><mxGeometry x="840" y="45" width="140" height="60" as="geometry"/></mxCell>
+    <mxCell id="note" value="框架合同已实现 ≠ 所有消费者已完成迁移；版本约束求解、通用 provider 注册表不在当前保证范围。" style="text;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#94a3b8;fontColor=#172b4d;fontSize=13;" vertex="1" parent="1"><mxGeometry x="20" y="820" width="1160" height="40" as="geometry"/></mxCell>
+    <mxCell id="edge-3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#526b87;endArrow=classic;" edge="1" source="goreg" target="lifecycle" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="edge-4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#526b87;endArrow=classic;" edge="1" source="webreg" target="weblife" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="edge-5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#526b87;endArrow=classic;" edge="1" source="remotereg" target="channel" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="edge-6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#526b87;endArrow=classic;" edge="1" source="channel" target="iframe" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="edge-backend-owner" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#526b87;endArrow=classic;" edge="1" source="lifecycle" target="goaddon" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="edge-frontend-owner" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#526b87;endArrow=classic;" edge="1" source="weblife" target="webaddon" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
   </root>
 </mxGraphModel>

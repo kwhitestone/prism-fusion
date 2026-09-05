@@ -1,11 +1,26 @@
 package initialize
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/kwhitestone/prism-fusion/global"
 	"go.uber.org/zap"
 )
+
+func TestGormFailsClosedForUnavailableSQLite(t *testing.T) {
+	previousConfig, previousLogger := global.PRISM_CONFIG, global.PRISM_LOG
+	global.PRISM_LOG = zap.NewNop()
+	global.PRISM_CONFIG.Mysql.Host = ""
+	global.PRISM_CONFIG.Sqlite.Path = filepath.Join(t.TempDir(), "missing", "db.sqlite")
+	t.Cleanup(func() { global.PRISM_CONFIG, global.PRISM_LOG = previousConfig, previousLogger })
+	defer func() {
+		if recover() == nil {
+			t.Fatal("selected SQLite failure was silently ignored")
+		}
+	}()
+	_ = Gorm()
+}
 
 func TestGormFailsClosedForInvalidMySQLConfiguration(t *testing.T) {
 	previousConfig := global.PRISM_CONFIG

@@ -40,6 +40,7 @@ jobs:
         run: |
           node --test --experimental-test-coverage --test-coverage-include='**/scripts/architecture/guard.mjs' --test-coverage-lines=80 scripts/architecture/guard.test.mjs
           node scripts/architecture/guard.mjs --root .
+          node --test --experimental-test-isolation=none scripts/workspace/verify.test.mjs scripts/workspace/bindings.test.mjs
 
       - name: Verify backend
         working-directory: src/server

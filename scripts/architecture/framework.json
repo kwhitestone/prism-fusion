@@ -19,6 +19,8 @@
     "src/server/config/sqlite.go",
     "src/server/config/system.go",
     "src/server/config/zap.go",
+    "src/server/core/application.go",
+    "src/server/core/application_defaults.go",
     "src/server/core/server.go",
     "src/server/core/server_run.go",
     "src/server/core/viper.go",
@@ -34,6 +36,7 @@
     "src/server/model/common.go",
     "src/server/model/local_time.go",
     "src/server/plugin/base.go",
+    "src/server/plugin/lifecycle.go",
     "src/server/plugin/manifest.go",
     "src/server/plugin/migration.go",
     "src/server/plugin/plugin.go",
@@ -118,11 +121,15 @@
     "src/web/src/layout/redirect.vue",
     "src/web/src/layout/types.ts",
     "src/web/src/main.ts",
+    "src/web/src/plugin/headless.ts",
     "src/web/src/plugin/host-routes.ts",
     "src/web/src/plugin/index.ts",
     "src/web/src/plugin/loader.ts",
     "src/web/src/plugin/navigation.ts",
     "src/web/src/plugin/registry.ts",
+    "src/web/src/plugin/remote-channel.ts",
+    "src/web/src/plugin/remote-registry.ts",
+    "src/web/src/plugin/remote.ts",
     "src/web/src/plugin/runtime.ts",
     "src/web/src/plugin/types.ts",
     "src/web/src/plugins/echarts.ts",
@@ -191,6 +198,9 @@
     ]
   },
   "routeMutators": {
+    "src/web/src/plugin/headless.ts": [
+      "createPluginHost"
+    ],
     "src/web/src/router/index.ts": [
       "createRouter"
     ],
@@ -206,6 +216,9 @@
     ]
   },
   "routePaths": {
+    "src/web/src/plugin/remote-registry.ts": [
+      "/"
+    ],
     "src/web/src/router/index.ts": [
       "/login",
       "/error/403",
@@ -318,7 +331,7 @@
     ]
   },
   "goDBAccess": [
-    "src/server/main.go",
+    "src/server/core/application_defaults.go",
     "src/server/initialize/tables.go"
   ],
   "goModelTypes": {

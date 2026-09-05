@@ -12,6 +12,20 @@ const allow = (mapping, file, value) => (mapping?.[file] ?? []).includes(value);
 const isAddon = (file, policy) => [policy.serverRoot, policy.frontendRoot].some(root => file.startsWith(`${root}/addons/`));
 const finding = (file, rule, message) => ({ file, rule, message });
 
+function addonOwner(file, root) {
+  if (!root || !file.startsWith(`${root}/addons/`)) return undefined;
+  const relative = file.slice(`${root}/addons/`.length);
+  return relative.includes("/") ? relative.split("/")[0] : undefined;
+}
+
+function frontendImportPath(specifier, file, policy) {
+  if (specifier.startsWith(".")) return path.posix.normalize(path.posix.join(path.posix.dirname(file), specifier));
+  for (const prefix of ["@/", "@biz/"]) {
+    if (specifier.startsWith(prefix)) return path.posix.join(policy.frontendRoot, specifier.slice(prefix.length));
+  }
+  return undefined;
+}
+
 export function inspectInventory(files, policy) {
   const approved = new Set(policy.coreFiles);
   return files.filter(file => runtimeSource.test(file) && !testSource.test(file) && !isAddon(file, policy) && !approved.has(file))
@@ -69,6 +83,13 @@ export function inspectTypeScript(file, source, policy, ts) {
     if (!specifier) return;
     if (escapesSourceRoot(specifier, file, policy)) report("source-root-import", `Runtime import escapes the reviewed source root: ${specifier}`);
     if (/\.(?:test|spec)(?:\.|$)/.test(specifier)) report("test-import", "Runtime code must not import test sources.");
+    if (policy.enforceAddonImports) {
+      const owner = addonOwner(file, policy.frontendRoot);
+      const target = addonOwner(frontendImportPath(specifier, file, policy) ?? "", policy.frontendRoot);
+      if (owner && target && owner !== target && !allow(policy.addonImports, file, specifier)) {
+        report("cross-addon-import", `Addon ${owner} imports ${target} implementation; use an explicit contract: ${specifier}`);
+      }
+    }
     if (addon || !addonImport(specifier, file, policy)) return;
     const entrypoint = /(?:^|\/)addons\/[a-zA-Z0-9_-]+(?:\/index(?:\.ts)?)?$/.test(specifier);
     if (!(policy.frontendComposition?.includes(file) && entrypoint)) report("addon-import", `Core imports concrete addon implementation: ${specifier}`);
@@ -125,14 +146,26 @@ export function inspectTypeScript(file, source, policy, ts) {
 
 export function inspectGoFeatures(features, policy) {
   const { file } = features;
-  if (isAddon(file, policy)) return [];
+  const addon = isAddon(file, policy);
   const errors = [];
   const report = (rule, message) => errors.push(finding(file, rule, message));
   for (const item of features.imports ?? []) {
     if (item.path.startsWith(".")) report("source-root-import", "Relative Go imports bypass the reviewed module source root.");
     if (item.alias === ".") report("dot-import", "Dot imports hide dependency boundaries and are forbidden in core source.");
-    if (/(?:^|\/)addons(?:\/|$)/.test(item.path) && !(item.alias === "_" && allow(policy.composition, file, item.path))) report("addon-import", `Core imports concrete addon implementation: ${item.path}`);
+    if ((policy.forbiddenImports ?? []).some(prefix => item.path === prefix || item.path.startsWith(`${prefix}/`))) report("forbidden-import", `Module dependency crosses the service boundary: ${item.path}`);
+    if (policy.enforceAddonImports && policy.serverModule) {
+      const owner = addonOwner(file, policy.serverRoot);
+      const prefix = `${policy.serverModule}/addons/`;
+      const target = item.path.startsWith(prefix) ? item.path.slice(prefix.length).split("/")[0] : undefined;
+      if (owner && target && owner !== target && !allow(policy.addonImports, file, item.path)) report("cross-addon-import", `Addon ${owner} imports ${target} implementation; use an explicit contract: ${item.path}`);
+    }
+    if (addon) continue;
+    const composition = item.alias === "_" && allow(policy.composition, file, item.path);
+    const commandEntrypoint = /\/cmd\/[^/]+\/main\.go$/.test(file) && allow(policy.entrypointImports, file, item.path);
+    if (/(?:^|\/)addons(?:\/|$)/.test(item.path) && !composition && !commandEntrypoint) report("addon-import", `Core imports concrete addon implementation: ${item.path}`);
   }
+  if (features.parseError) report("parse-error", features.parseError);
+  if (addon) return errors;
   for (const call of features.calls ?? []) {
     const key = `${call.function}:${call.name}`;
     if (call.routing && !allow(policy.goRouteCalls, file, key)) report("route-registration", `Route registration ${key} is outside approved shell infrastructure.`);
@@ -146,30 +179,44 @@ export function inspectGoFeatures(features, policy) {
     if (type.fields > 0 && allow(policy.emptyGoTypes, file, type.name)) report("business-group", `${type.name} is a compatibility shell and must remain empty.`);
   }
   if ((features.selectors ?? []).includes("PRISM_DB") && !policy.goDBAccess?.includes(file)) report("database-access", "Direct framework database access belongs in addons or approved initialization.");
-  if (features.parseError) report("parse-error", features.parseError);
   return errors;
 }
 
-async function walk(directory, root, result = []) {
+async function walk(directory, root, dataRoots, result = []) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
+    if ([".git", "node_modules", "vendor", "dist"].includes(entry.name)) continue;
     const absolute = path.join(directory, entry.name);
     if (entry.isSymbolicLink()) throw new Error(`Source symlinks are not permitted: ${absolute}`);
-    if (entry.isDirectory()) await walk(absolute, root, result);
+    if (dataRoots.has(absolute)) continue;
+    if (entry.isDirectory()) await walk(absolute, root, dataRoots, result);
     else if (runtimeSource.test(entry.name)) result.push(path.relative(root, absolute).split(path.sep).join("/"));
   }
   return result;
 }
 
-export async function checkRepository(root, profile = "framework") {
-  if (!["framework", "example"].includes(profile)) throw new Error(`Unknown architecture profile: ${profile}`);
-  const policy = JSON.parse(await readFile(path.join(here, `${profile}.json`), "utf8"));
+export async function checkRepository(root, profile = "framework", policyFile) {
+  if (!["framework", "example", "consumer"].includes(profile)) throw new Error(`Unknown architecture profile: ${profile}`);
+  if (profile === "consumer" && !policyFile) throw new Error("Consumer architecture profile requires --policy");
+  const policy = JSON.parse(await readFile(policyFile ? path.resolve(root, policyFile) : path.join(here, `${profile}.json`), "utf8"));
+  const roots = policy.sourceRoots ?? [policy.serverRoot, policy.frontendRoot].filter(Boolean);
+  if (!Array.isArray(roots) || !roots.length || roots.some(dir => typeof dir !== "string" || path.isAbsolute(dir) || dir.split(/[\\/]/).some(part => part === "..") || path.resolve(root, dir) !== root && !path.resolve(root, dir).startsWith(`${root}${path.sep}`))) throw new Error("Invalid architecture source root");
+  if (!Array.isArray(policy.coreFiles)) throw new Error("Architecture policy requires a reviewed core file inventory");
+  const runtimeData = policy.runtimeDataRoots ?? [];
+  if (!Array.isArray(runtimeData) || runtimeData.some(dir => typeof dir !== "string" || path.isAbsolute(dir) || dir.split(/[\\/]/).includes("..") || !roots.some(source => path.resolve(root, dir).startsWith(`${path.resolve(root, source)}${path.sep}`)))) throw new Error("Invalid runtime data root: it must be a reviewed subdirectory, never an entire source root");
+  const dataRoots = new Set(runtimeData.map(dir => path.resolve(root, dir)));
+  if (runtimeData.length) {
+    const tracked = spawnSync("git", ["ls-files", "-z", "--", ...runtimeData], { cwd: root, encoding: "utf8" });
+    if (tracked.status !== 0) throw new Error("Runtime data exclusions require a Git checkout");
+    const trackedSource = tracked.stdout.split("\0").find(file => runtimeSource.test(file));
+    if (trackedSource) throw new Error(`Tracked runtime source cannot be excluded as user data: ${trackedSource}`);
+  }
   const require = createRequire(path.join(here, "../../src/web/package.json"));
   const ts = require("typescript");
-  const files = (await Promise.all([policy.serverRoot, policy.frontendRoot].map(dir => walk(path.join(root, dir), root)))).flat().sort();
+  const files = [...new Set((await Promise.all(roots.map(dir => walk(path.join(root, dir), root, dataRoots)))).flat())].sort();
   const errors = inspectInventory(files, policy);
   const runtimeFiles = files.filter(file => !testSource.test(file));
   const sources = await Promise.all(runtimeFiles.map(async file => ({ file, source: await readFile(path.join(root, file), "utf8") })));
-  const goSources = sources.filter(item => item.file.endsWith(".go") && !isAddon(item.file, policy));
+  const goSources = sources.filter(item => item.file.endsWith(".go"));
   const extraction = spawnSync("go", ["run", path.join(here, "go-inspect/main.go")], {
     cwd: root,
     input: JSON.stringify(goSources),
@@ -187,7 +234,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
     const args = process.argv.slice(2);
     const value = (flag, fallback) => args.includes(flag) ? args[args.indexOf(flag) + 1] : fallback;
     const root = path.resolve(value("--root", path.join(here, "../..")));
-    const result = await checkRepository(root, value("--profile", "framework"));
+    const result = await checkRepository(root, value("--profile", "framework"), value("--policy", undefined));
     for (const error of result.errors) console.error(`${error.file} [${error.rule}] ${error.message}`);
     if (result.errors.length) process.exitCode = 1;
     else console.log(`Architecture guard passed (${result.sourceCount} runtime source files, reviewed core inventory and addon boundaries).`);

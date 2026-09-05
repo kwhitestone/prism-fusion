@@ -27,6 +27,12 @@ try {
     "runtime.ts",
     "runtime.test.ts",
     "host-routes.ts",
+    "headless.ts",
+    "headless.test.ts",
+    "remote.ts",
+    "remote-registry.ts",
+    "remote-channel.ts",
+    "remote.test.ts",
     "navigation.ts",
     "navigation.test.ts"
   ]) {
@@ -53,13 +59,16 @@ try {
       "--test-coverage-include=**/registry.js",
       "--test-coverage-include=**/runtime.js",
       "--test-coverage-include=**/navigation.js",
+      "--test-coverage-include=**/headless.js",
+      "--test-coverage-include=**/remote-registry.js",
+      "--test-coverage-include=**/remote-channel.js",
       "--test-coverage-lines=80"
     );
   }
   const exitCode = await new Promise(resolve => {
     const child = spawn(
       process.execPath,
-      [...args, "registry.test.js", "runtime.test.js", "navigation.test.js"],
+      [...args, "registry.test.js", "runtime.test.js", "navigation.test.js", "headless.test.js", "remote.test.js"],
       { cwd: temporaryDirectory, stdio: "inherit" }
     );
     child.on("error", error => {

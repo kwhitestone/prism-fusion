@@ -1,6 +1,6 @@
 # Prism Fusion Plugin Specification V2
 
-Status: backend and frontend V2.0 startup contracts and architecture CI guards implemented. Full backend lifecycle, provider contribution, and remote-application contracts remain staged extensions.
+Status: V2.1 adds an orchestrated backend lifecycle, a headless frontend entrypoint, an independent Remote Application contract, and pinned workspace consumer checks. Consumer migration and end-to-end acceptance are separate release gates; implementing these framework contracts does not certify every application. A generic strategy-provider registry and dependency version-constraint solver remain unimplemented.
 
 ## 1. Goals
 
@@ -8,12 +8,12 @@ V2 turns plugin loading from an implicit `init()` side effect into a validated s
 
 The specification distinguishes four extension forms:
 
-| Kind | Runtime boundary | V2.0 status |
+| Kind | Runtime boundary | Current status |
 | --- | --- | --- |
 | Backend Addon | In-process Go plugin that owns routes, middleware, and models | Implemented |
-| Strategy Provider | Replaceable implementation inside a capability domain | Kind constant reserved but rejected by V2.0; contribution registry is next phase |
+| Strategy Provider | Replaceable implementation inside a capability domain | Kind constant reserved but rejected; use an explicit domain-owned contract until a generic registry exists |
 | Frontend Addon | In-process Vue module in the same Vite bundle | V1-compatible `PluginModule`, V2 manifest, dependency graph and transactional installation |
-| Remote Application | Independently deployed iframe/application | `RemoteAppManifest` is next phase |
+| Remote Application | Independently deployed iframe/application | Independent manifest, route registry, and versioned ready/instance/message-capability channel |
 
 These forms must not share one registry merely because they are all called “plugins”. Each registry has different identity, trust, lifecycle, and deployment semantics.
 
@@ -132,7 +132,22 @@ V1 uses `RoutePrefix()`. V2 may declare multiple `RouteScopes`; when omitted, `R
 
 Plugins may implement the exported optional `BeforeMigrator` and `AfterMigrator` interfaces. Both hooks run even when a plugin returns no AutoMigrate models, allowing data-only migrations. Migration execution follows the same frozen dependency order as route setup.
 
-General `Validate`, `Initialize`, `Start`, `Ready`, and `Stop` phases are intentionally not declared without orchestration. They will be added together with startup rollback, readiness aggregation, and reverse-order shutdown semantics.
+V2.1 exports optional `Validator`, `Initializer`, `Starter`, `Readiness`, and `Stopper` interfaces. Their methods accept `context.Context` and return `error`; neither `Plugin` nor `BasePlugin` gains mandatory methods.
+
+The composition-only host calls `core.RunApplication(core.ApplicationOptions{})`. The application owns one startup attempt per process:
+
+```text
+configuration/logging -> database -> freeze/resolve
+-> all Validate -> all Initialize -> migrations -> middleware/routes
+-> all Start -> all Ready -> listen/serve
+shutdown: drain HTTP -> cancel workers -> reverse Stop -> close database
+```
+
+`Validate` must be side-effect free. `Initialize` may register capability adapters and prepare resources, but cannot query tables before migration. `Start` launches workers without blocking indefinitely. `Ready` must verify actual usability, not merely the existence of a goroutine. A failed initialization, migration, route setup, start, readiness check, or listener prevents serving and triggers cleanup. Even an addon whose initialization failed partway receives `Stop`; cleanup must tolerate partial state.
+
+All phases consume the same frozen dependency order. `Stop` runs in reverse order, including after panics and cancellation, with an independent cooperative timeout. Completed shutdown is idempotent; reentrant or concurrent lifecycle stages fail with `ErrLifecycleState`. Cleanup is not forced goroutine termination or a database rollback: addons must honor cancellation, close blocking connections, wait for their workers, and release capability registrations.
+
+`DisableDatabase: true` explicitly selects a database-free application and skips model migration. Otherwise an unavailable database fails startup, including an explicitly configured SQLite database. `RunApplicationContext` allows an embedding process to supply cancellation; its process-global runtime cannot be restarted. Legacy `RunServer` remains a compatibility path and does not silently run a second migration/lifecycle.
 
 ## 7. Provider rule
 
@@ -212,3 +227,51 @@ pnpm --dir src/web test
 The shared guard combines TypeScript/Vue and Go AST inspection with an explicit core-source inventory. New runtime files outside addons, unauthorized addon imports, concrete business endpoints/models/stores, and unapproved router mutations fail CI. Existing core files are inspected too. Exceptions are explicit infrastructure contracts, not permission to put arbitrary business behavior in an allowlisted file. Changes to the checker, inventory or exceptions require architectural review.
 
 This establishes enforceable mechanical boundaries for the checked repositories, not a proof that every function is business-free. In-process Go/Vue addons are trusted code; indirect effects, deliberate policy changes and semantic business leakage still need review. Other services must adopt this guard and pass their own consumer tests before claiming the same guarantee.
+
+## 12. Headless frontend host
+
+Independent Vue applications import `@prism-fusion/plugin-runtime`, whose source package is `src/web/src/plugin`. This entrypoint exports the same registry, runtime, and types without importing Prism Fusion's UI, router singleton, builtin addons, or HTTP/session policies. Consumers own their appearance and authentication behavior.
+
+```ts
+import { createPluginHost } from "@prism-fusion/plugin-runtime";
+
+const host = createPluginHost({ app, router, coreRoutes, homePath: "/orders" });
+host.register([orders]);
+await host.install();
+app.use(router);
+await router.isReady();
+app.mount("#app");
+// When disposing the application:
+await host.uninstall();
+app.unmount();
+```
+
+Each host owns its registry and route baseline. Registration is batch-atomic and closes when installation begins. Install is single-flight; cancellation during asynchronous setup rolls back entered addons. A failed preflight never deletes routes that existed before installation. `restoreRoutes()` restores the successful core-plus-plugin baseline. The root redirect and an explicitly declared, named core catch-all are infrastructure; a catch-all must not assign unknown business routes to an arbitrary remote application.
+
+The package currently exports TypeScript source for Vite consumers and peers on Vue 3.5 / Vue Router 4.6. Workspace consumers must use a single Vue/Router identity (Vite dedupe and matching TypeScript/Vite symlink handling), lock dependencies, and run their own type/build tests. This is not a precompiled browser CDN bundle.
+
+## 13. Remote Application contract
+
+`@prism-fusion/plugin-runtime/remote` is separate from the in-process addon registry. A `RemoteApplicationManifest` declares `apiVersion: prism-fusion/v2`, `kind: remote-application`, ID, semantic version, `entryUrl`, exact `allowedOrigins`, `protocolVersion: 1`, route scopes, parent-to-child route mappings, dependency metadata, and directional message capabilities.
+
+`RemoteApplicationRegistry.register` copies and validates a batch atomically. `freeze` checks dependencies and route collisions. `resolve(parentPath)` returns only an application and child path owned by a declared route. Backend menu metadata cannot choose an iframe application, component, executable route, or target origin. Child route parameters must come from the declared parent template.
+
+For each iframe instance, the host creates a channel with the exact `contentWindow`, starts a new unpredictable `instanceId`, and sends `host:init` only to the entry URL's exact origin. The child validates its configured parent origin/source, mounts its runtime, installs handlers, and calls `ready()`. The host sends authentication or business messages only after matching `child:ready`.
+
+Every envelope carries `protocol: prism-fusion/remote`, protocol version, app ID, instance ID, message type, and optional payload. Both directions validate origin, source window, protocol, app, instance, and declared message capability. A reload/retry rotates the instance; late messages from a previous instance are rejected. Incompatible versions or readiness timeout fail the host channel; disposal releases its timer and forbids further sends. Consumers own event-listener registration and removal, payload validation, session-version semantics, UI failure/retry handling, and business dispatch. They must not reintroduce an unvalidated raw `postMessage` handler as a compatibility bypass.
+
+This is a trusted-application transport boundary, not a sandbox for malicious code on an allowed origin, and does not replace backend authentication or authorization. Browser origin/source checks are still required even if a payload happens to contain a token or session version.
+
+## 14. Pinned workspace consumers
+
+A consumer may use either an initialized submodule (the example site) or explicitly pinned sibling repositories. For sibling workspaces, `workspace.lock.json` records each repository and full 40-character commit. `scripts/workspace/verify.mjs` rejects missing, dirty, symbolic-link, or mismatched dependency checkouts. Local `replace`, `go.work`, or `file:` dependencies alone do not constitute a release pin.
+
+Every pin declares `role: runtime` or `verification`. Runtime pins include `goModules: [{ module, path }]` and/or `packages: [{ package, path, sharedPeers }]`; paths are relative to the pinned repository. A verification-only pin must not declare runtime bindings. Service policies with `serverModule` require a runtime framework pin. For example, a Go consumer binds `github.com/kwhitestone/prism-fusion` to `src/server`; a Vite consumer binds `@prism-fusion/plugin-runtime` to `src/web/src/plugin` with shared peers `vue` and `vue-router`.
+
+`bindings.mjs` verifies the effective `go list -m -json` source directory, frontend `file:` declarations and package-manager lock targets, installed source (including copied pnpm file packages), and shared Vue identity or effective Vite dedupe. The consumer gate snapshots the original pins, then rechecks dependency HEAD, cleanliness, and that snapshot after installation, bundler configuration loading, and final tests/build. A build stage cannot make an altered checkout pass simply by rewriting the consumer lock. This detects accidental or persistent input changes; it is not a sandbox against arbitrary malicious build scripts running with the verifier's OS permissions.
+
+Consumers commit a reviewed `architecture.json` and invoke the shared guard with `--profile consumer --policy architecture.json`. `enforceAddonImports` rejects direct sibling-addon implementation imports in Go and TypeScript; narrow contracts remain outside addons only when they contain interfaces, protocol data, and controlled registration rather than displaced business implementation. Each non-addon runtime file and any infrastructure exception requires explicit review.
+
+Standalone `cmd/<tool>/main.go` adapters can have exact `entrypointImports`; this does not exempt them from endpoint, persistence, or inventory checks. An explicit `runtimeDataRoots` subdirectory may exclude existing user-generated runtime content, but never an entire source root or Git-tracked runtime source. This is not a general `.gitignore` exemption and must not hide application implementation.
+
+The reusable `.github/workflows/consumer.yml`, itself referenced at the same immutable framework commit, checks out locked dependencies and runs the common guard, backend race/vet/build, and frontend unit/build gates. `verify-consumer.mjs` is the local equivalent. Runtime acceptance remains a consumer responsibility: validate real startup configuration, JSON envelopes, authentication, business behavior, and rejection paths. A configured workflow is not evidence that a remote CI run has passed.

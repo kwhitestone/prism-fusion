@@ -1,0 +1,71 @@
+name: Verify pinned plugin consumer
+
+on:
+  workflow_call:
+    inputs:
+      backend-path:
+        type: string
+        default: ""
+      frontend-path:
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: project
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.8"
+          cache: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - name: Check out exact dependency commits
+        working-directory: project
+        run: |
+          node --input-type=module <<'JS'
+          import { readFileSync, mkdirSync } from 'node:fs';
+          import { spawnSync } from 'node:child_process';
+          import path from 'node:path';
+          const lock = JSON.parse(readFileSync('workspace.lock.json', 'utf8'));
+          if (lock.version !== 1 || !Array.isArray(lock.dependencies) || !lock.dependencies.length || lock.dependencies.length > 64) throw new Error('Invalid dependency lock');
+          const names = new Set();
+          let framework;
+          const workspace = path.dirname(process.cwd());
+          for (const dependency of lock.dependencies) {
+            if (!/^[a-z][a-z0-9-]{0,63}$/.test(dependency.name) || !/^[A-Za-z0-9][A-Za-z0-9_.-]*\/[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(dependency.repository) || !/^[a-f0-9]{40}$/.test(dependency.commit) || names.has(dependency.name) || dependency.name === 'project') throw new Error('Invalid dependency');
+            names.add(dependency.name);
+            if (dependency.name === 'prism-fusion') {
+              if (dependency.repository !== 'kwhitestone/prism-fusion') throw new Error('Framework pin must use the official repository');
+              framework = dependency;
+            }
+            const directory = path.join(workspace, dependency.name);
+            mkdirSync(directory);
+            for (const args of [['init', '-q'], ['fetch', '--depth=1', `https://github.com/${dependency.repository}.git`, dependency.commit], ['checkout', '--detach', 'FETCH_HEAD']]) {
+              const result = spawnSync('git', args, { cwd: directory, stdio: 'inherit' });
+              if (result.status !== 0) process.exit(result.status ?? 1);
+            }
+          }
+          if (!framework) throw new Error('Framework pin is required');
+          JS
+      - name: Install shared architecture checker
+        working-directory: prism-fusion/src/web
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Verify consumer contracts, tests and builds
+        env:
+          VERIFY_BACKEND: ${{ inputs.backend-path }}
+          VERIFY_FRONTEND: ${{ inputs.frontend-path }}
+        run: >-
+          node prism-fusion/scripts/workspace/verify-consumer.mjs
+          --root project --backend "$VERIFY_BACKEND" --frontend "$VERIFY_FRONTEND"

@@ -112,6 +112,15 @@ test("backend composition allows only exact blank imports", () => {
   assert.ok(codes(backend({ imports: [{ path: "github.com/kwhitestone/prism-fusion/addons", alias: "addons" }] }, "src/server/main.go")).includes("addon-import"));
 });
 
+test("standalone command entrypoints allow only explicitly reviewed addon adapters", () => {
+  const file = "src/server/cmd/tool/main.go";
+  const commandPolicy = { ...policy, entrypointImports: { [file]: ["example/addons/tool/stdio"] } };
+  const inspect = (path, source = file) => inspectGoFeatures({ file: source, imports: [{ path, alias: "stdio" }] }, commandPolicy);
+  assert.deepEqual(inspect("example/addons/tool/stdio"), []);
+  assert.ok(inspect("example/addons/tool/internal").some(error => error.rule === "addon-import"));
+  assert.ok(inspect("example/addons/tool/stdio", "src/server/core.go").some(error => error.rule === "addon-import"));
+});
+
 test("backend route exemptions are exact calls and exact paths", () => {
   assert.deepEqual(backend({ calls: [{ name: "GET", function: "Routers", routing: true }], routePaths: ["/health"] }, "src/server/initialize/router.go"), []);
   assert.ok(codes(backend({ calls: [{ name: "POST", function: "Routers", routing: true }], routePaths: ["/orders"] }, "src/server/initialize/router.go")).includes("route-registration"));
@@ -172,4 +181,63 @@ test("repository scan accepts a composition-only host and rejects a business fil
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("consumer addons cannot import sibling implementations through aliases or relative paths", () => {
+  const strict = { ...policy, enforceAddonImports: true };
+  const file = "src/web/src/addons/orders/index.ts";
+  for (const specifier of ["@/addons/payments/api", "../payments/api", "../../addons/payments/api"]) {
+    assert.ok(codes(inspectTypeScript(file, `import api from "${specifier}"`, strict, ts)).includes("cross-addon-import"));
+  }
+  assert.deepEqual(inspectTypeScript(file, 'import own from "./api"; import port from "@/contracts/payments";', strict, ts), []);
+});
+
+test("Go addon boundaries inspect imports instead of skipping all addon source", () => {
+  const strict = { ...policy, enforceAddonImports: true, serverModule: "example.test/service" };
+  const file = "src/server/addons/orders/service.go";
+  const inspect = imports => inspectGoFeatures({ file, imports }, strict);
+  assert.ok(codes(inspect([{ path: "example.test/service/addons/payments/service", alias: "payments" }])).includes("cross-addon-import"));
+  assert.deepEqual(inspect([{ path: "example.test/service/addons/orders/model", alias: "model" }, { path: "example.test/service/contracts/payments", alias: "payments" }]), []);
+  assert.ok(codes(inspect([{ path: "../escape", alias: "escape" }])).includes("source-root-import"));
+});
+
+test("consumer runtime data exclusions never hide tracked source or adjacent core files", async () => {
+  const root = await mkdtemp(join(tmpdir(), "prism-runtime-data-"));
+  try {
+    assert.equal(spawnSync("git", ["init", "-q"], { cwd: root }).status, 0);
+    await mkdir(join(root, "server/data"), { recursive: true });
+    await writeFile(join(root, "server/main.go"), "package main\nfunc main() {}\n");
+    await writeFile(join(root, "server/data/user-skill.js"), "export const userOwnedSkill = true;\n");
+    const dataPolicy = { serverRoot: "server", coreFiles: ["server/main.go"], runtimeDataRoots: ["server/data"] };
+    await writeFile(join(root, "architecture.json"), JSON.stringify(dataPolicy));
+    assert.deepEqual((await checkRepository(root, "consumer", "architecture.json")).errors, []);
+    await writeFile(join(root, "server/orders.go"), "package main\ntype Order struct{}\n");
+    assert.ok((await checkRepository(root, "consumer", "architecture.json")).errors.some(error => error.rule === "core-inventory"));
+    assert.equal(spawnSync("git", ["add", "server/data/user-skill.js"], { cwd: root }).status, 0);
+    await assert.rejects(checkRepository(root, "consumer", "architecture.json"), /Tracked runtime source/);
+    await writeFile(join(root, "architecture.json"), JSON.stringify({ ...dataPolicy, runtimeDataRoots: ["server"] }));
+    await assert.rejects(checkRepository(root, "consumer", "architecture.json"), /Invalid runtime data/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("consumer profiles support frontend-only roots without silently excluding source", async () => {
+  const root = await mkdtemp(join(tmpdir(), "prism-consumer-policy-"));
+  try {
+    await mkdir(join(root, "src/addons/orders"), { recursive: true });
+    await writeFile(join(root, "architecture.json"), JSON.stringify({
+      frontendRoot: "src", coreFiles: ["src/main.ts"], frontendComposition: ["src/main.ts"], enforceAddonImports: true
+    }));
+    await writeFile(join(root, "src/main.ts"), 'import orders from "./addons/orders";');
+    await writeFile(join(root, "src/addons/orders/index.ts"), 'export default {name:"orders"};');
+    const result = await checkRepository(root, "consumer", "architecture.json");
+    assert.equal(result.sourceCount, 2);
+    assert.deepEqual(result.errors, []);
+    await writeFile(join(root, "src/business.ts"), 'export const route = {path:"/orders"}');
+    const changed = await checkRepository(root, "consumer", "architecture.json");
+    assert.ok(codes(changed.errors).includes("core-inventory"));
+    await writeFile(join(root, "architecture.json"), JSON.stringify({ frontendRoot: "../outside", coreFiles: [] }));
+    await assert.rejects(checkRepository(root, "consumer", "architecture.json"), /source root/i);
+  } finally { await rm(root, { recursive: true, force: true }); }
 });

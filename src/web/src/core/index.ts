@@ -2,7 +2,7 @@
  * Prism Fusion Admin 框架核心导出
  *
  * 业务项目通过此入口引用框架能力，无需直接依赖内部模块路径
- * 使用方式: import { ... } from "prism-fusion-admin"
+ * 使用方式: import { ... } from "prism-fusion-web"
  */
 
 // ========== 核心组件 ==========
@@ -13,6 +13,7 @@ export {
   default as router,
   resetRouter,
   resetLoadedPaths,
+  configurePluginHost,
   registerExternalRoutes
 } from "../router";
 export {
@@ -52,6 +53,8 @@ export {
 } from "../plugin/loader";
 
 export type {
+  PluginManifest,
+  PluginDependency,
   PluginModule,
   PluginStatus,
   PluginPermission,

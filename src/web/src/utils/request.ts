@@ -23,7 +23,7 @@ import {
   getObservedAuthSession,
   readAuthBindingWithLock,
   withAuthSessionLock
-} from "@/addons/auth/session";
+} from "@/core/auth-session";
 
 // 扩展 AxiosRequestConfig 接口
 declare module "axios" {
@@ -361,7 +361,7 @@ service.interceptors.response.use(
 // 监听页面卸载事件，确保loading被正确清理
 if (typeof window !== "undefined") {
   window.addEventListener("beforeunload", resetLoading);
-  window.addEventListener("unload", resetLoading);
+  window.addEventListener("pagehide", resetLoading);
 }
 
 export { resetLoading };

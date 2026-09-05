@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { store } from "../utils";
 import { shallowRef, type Component } from "vue";
+import { createReversibleSlot } from "@/core/reversible-slot";
 
 /**
  * 登录 UI 插件化
@@ -17,15 +18,27 @@ import { shallowRef, type Component } from "vue";
 
 const _loginComponent = shallowRef<Component | null>(null);
 const _footerComponent = shallowRef<Component | null>(null);
+const loginComponents = createReversibleSlot<Component | null>(null);
+const footerComponents = createReversibleSlot<Component | null>(null);
 
 /** 设置登录组件（由认证插件调用） */
-export function setLoginComponent(component: Component) {
-  _loginComponent.value = component;
+export function setLoginComponent(component: Component | null): () => void {
+  const dispose = loginComponents.set(component);
+  _loginComponent.value = loginComponents.get();
+  return () => {
+    dispose();
+    _loginComponent.value = loginComponents.get();
+  };
 }
 
 /** 设置登录页底部页脚组件（由业务项目调用，如备案信息） */
-export function setFooterComponent(component: Component) {
-  _footerComponent.value = component;
+export function setFooterComponent(component: Component | null): () => void {
+  const dispose = footerComponents.set(component);
+  _footerComponent.value = footerComponents.get();
+  return () => {
+    dispose();
+    _footerComponent.value = footerComponents.get();
+  };
 }
 
 export const useLoginUIStore = defineStore("login-ui", {

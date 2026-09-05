@@ -47,13 +47,13 @@
     <mxCell id="http" value="&lt;b&gt;Gin + Huma&lt;/b&gt;&lt;br&gt;HTTP / OpenAPI 3.1&lt;br&gt;ReDoc / Scalar" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1f2937;" vertex="1" parent="backend">
       <mxGeometry x="220" y="158" width="180" height="70" as="geometry"/>
     </mxCell>
-    <mxCell id="route-guard" value="&lt;b&gt;路由边界守卫&lt;/b&gt;&lt;br&gt;scope isolation&lt;br&gt;新增路由校验（仅 scoped MW）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1f2937;" vertex="1" parent="backend">
+    <mxCell id="route-guard" value="&lt;b&gt;路由边界守卫&lt;/b&gt;&lt;br&gt;scope isolation&lt;br&gt;所有插件路由归属校验" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1f2937;" vertex="1" parent="backend">
       <mxGeometry x="430" y="158" width="180" height="70" as="geometry"/>
     </mxCell>
     <mxCell id="gorm" value="&lt;b&gt;GORM 数据访问&lt;/b&gt;&lt;br&gt;显式选择存储" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1f2937;" vertex="1" parent="backend">
       <mxGeometry x="20" y="278" width="170" height="70" as="geometry"/>
     </mxCell>
-    <mxCell id="auth" value="&lt;b&gt;Auth addon&lt;/b&gt;&lt;br&gt;V1 兼容 / priority 10&lt;br&gt;全局 JWT middleware" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1f2937;" vertex="1" parent="backend">
+    <mxCell id="auth" value="&lt;b&gt;Auth addon&lt;/b&gt;&lt;br&gt;V2 / priority 10&lt;br&gt;全局 JWT middleware" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1f2937;" vertex="1" parent="backend">
       <mxGeometry x="220" y="278" width="180" height="78" as="geometry"/>
     </mxCell>
     <mxCell id="rbac" value="&lt;b&gt;RBAC addon&lt;/b&gt;&lt;br&gt;V2 / requires auth&lt;br&gt;作用域权限 middleware" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1f2937;" vertex="1" parent="backend">
@@ -65,7 +65,7 @@
     <mxCell id="vue-shell" value="&lt;b&gt;Vue 应用壳&lt;/b&gt;&lt;br&gt;Vite / Pinia" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1f2937;" vertex="1" parent="frontend">
       <mxGeometry x="20" y="48" width="170" height="70" as="geometry"/>
     </mxCell>
-    <mxCell id="web-loader" value="&lt;b&gt;Plugin Loader&lt;/b&gt;&lt;br&gt;内置自动发现&lt;br&gt;业务显式注入" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1f2937;fontStyle=1;" vertex="1" parent="frontend">
+    <mxCell id="web-loader" value="&lt;b&gt;Plugin Registry&lt;/b&gt;&lt;br&gt;V2 依赖 / 冻结&lt;br&gt;预检 / 安装回滚" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1f2937;fontStyle=1;" vertex="1" parent="frontend">
       <mxGeometry x="220" y="48" width="180" height="70" as="geometry"/>
     </mxCell>
     <mxCell id="plugin-module" value="&lt;b&gt;PluginModule&lt;/b&gt;&lt;br&gt;routes / components&lt;br&gt;install / setup / destroy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1f2937;" vertex="1" parent="frontend">
@@ -74,7 +74,7 @@
     <mxCell id="session-http" value="&lt;b&gt;Session + HTTP&lt;/b&gt;&lt;br&gt;Token refresh / epoch&lt;br&gt;API envelope" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1f2937;" vertex="1" parent="frontend">
       <mxGeometry x="20" y="158" width="170" height="70" as="geometry"/>
     </mxCell>
-    <mxCell id="router-menu" value="&lt;b&gt;Router + Menu&lt;/b&gt;&lt;br&gt;静态路由 / 动态路由" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1f2937;" vertex="1" parent="frontend">
+    <mxCell id="router-menu" value="&lt;b&gt;Router + Menu&lt;/b&gt;&lt;br&gt;插件快照 / 菜单元数据" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1f2937;" vertex="1" parent="frontend">
       <mxGeometry x="220" y="158" width="180" height="70" as="geometry"/>
     </mxCell>
     <mxCell id="ui-perms" value="&lt;b&gt;UI 权限层&lt;/b&gt;&lt;br&gt;v-perms / 可见性&lt;br&gt;非最终授权边界" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#1f2937;" vertex="1" parent="frontend">
@@ -101,7 +101,7 @@
     <mxCell id="static" value="静态资源&lt;br&gt;Go 进程统一服务" style="shape=mxgraph.flowchart.document;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1f2937;" vertex="1" parent="infra">
       <mxGeometry x="470" y="42" width="170" height="66" as="geometry"/>
     </mxCell>
-    <mxCell id="delivery" value="Docker / Compose / CI&lt;br&gt;build + test + smoke" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1f2937;" vertex="1" parent="infra">
+    <mxCell id="delivery" value="Docker / Compose / CI&lt;br&gt;AST guard + test + smoke" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1f2937;" vertex="1" parent="infra">
       <mxGeometry x="700" y="42" width="200" height="66" as="geometry"/>
     </mxCell>
     <mxCell id="future" value="&lt;b&gt;V2.0 尚未实现&lt;/b&gt;&lt;br&gt;通用 provider registry&lt;br&gt;Remote Application manifest" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#4b5563;" vertex="1" parent="infra">

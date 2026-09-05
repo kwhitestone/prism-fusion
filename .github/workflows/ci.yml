@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.8"
+          cache-dependency-path: src/server/go.sum
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: src/web/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: src/web
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify plugin architecture boundaries
+        run: |
+          node --test --experimental-test-coverage --test-coverage-include='**/scripts/architecture/guard.mjs' --test-coverage-lines=80 scripts/architecture/guard.test.mjs
+          node scripts/architecture/guard.mjs --root .
+
+      - name: Verify backend
+        working-directory: src/server
+        run: |
+          go test -race ./...
+          go vet ./...
+          go build ./...
+
+      - name: Smoke test built server
+        working-directory: src/server
+        env:
+          DB_HOST: ""
+          GATEWAY_PORT: "26680"
+        run: |
+          smoke_dir="$(mktemp -d)"
+          server_pid=""
+          cleanup() {
+            if [ -n "$server_pid" ]; then
+              kill "$server_pid" 2>/dev/null || true
+              wait "$server_pid" 2>/dev/null || true
+            fi
+            rm -rf "$smoke_dir"
+          }
+          trap cleanup EXIT
+          export JWT_SECRET="$(openssl rand -hex 32)"
+          go build -o "$smoke_dir/prism-fusion" .
+          (
+            cd "$smoke_dir"
+            exec "$smoke_dir/prism-fusion" -c "$GITHUB_WORKSPACE/src/server/config.yaml"
+          ) >"$smoke_dir/server.log" 2>&1 &
+          server_pid=$!
+          for attempt in $(seq 1 30); do
+            if response="$(curl -fsS http://127.0.0.1:26680/health)"; then
+              printf '%s' "$response" | node -e 'let input="";process.stdin.on("data",chunk=>input+=chunk);process.stdin.on("end",()=>{const body=JSON.parse(input);if(body.code!==0||body.data?.status!=="healthy")process.exit(1)});'
+              status="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:26680/api/v1/addons/rbac/me)"
+              test "$status" = "401"
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$smoke_dir/server.log"
+          exit 1
+
+      - name: Verify frontend
+        working-directory: src/web
+        run: |
+          pnpm audit --audit-level high --registry=https://registry.npmjs.org
+          pnpm test
+          pnpm typecheck
+          pnpm build

@@ -5,7 +5,7 @@ import {
   invalidateAuthSession,
   observeAuthSession,
   withAuthSessionLock
-} from "@/addons/auth/session";
+} from "@/core/auth-session";
 
 /**
  * 简版前端单点登录，根据实际业务自行编写，平台启动后本地可以跳后面这个链接进行测试 http://localhost:3388/#/permission/page/index?username=sso&roles=admin&accessToken=eyJhbGciOiJIUzUxMiJ9.admin

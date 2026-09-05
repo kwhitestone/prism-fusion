@@ -10,12 +10,15 @@ import {
   formatFlatteningRoutes
 } from "../utils";
 import { useMultiTagsStoreHook } from "./multiTags";
+import { copyRoutes } from "@/plugin/host-routes";
+import { mergeNavigationMetadata } from "@/plugin/navigation";
+import type { RouteRecordRaw } from "vue-router";
 
 export const usePermissionStore = defineStore("pure-permission", {
   state: () => ({
     // 静态路由生成的菜单
-    constantMenus,
-    // 整体路由生成的菜单（静态、动态）
+    constantMenus: copyRoutes(constantMenus),
+    // 已声明路由生成的菜单，可叠加后端显示元数据
     wholeMenus: [],
     // 整体路由（一维数组格式）
     flatteningRoutes: [],
@@ -23,13 +26,19 @@ export const usePermissionStore = defineStore("pure-permission", {
     cachePageList: []
   }),
   actions: {
+    setStaticMenus(routes: RouteRecordRaw[]) {
+      this.constantMenus = copyRoutes(routes);
+      this.wholeMenus = [];
+      this.flatteningRoutes = [];
+    },
     /** 组装整体路由生成的菜单 */
-    handleWholeMenus(routes: any[]) {
+    handleWholeMenus(routes: unknown) {
+      const menus = ascending(mergeNavigationMetadata(this.constantMenus as RouteRecordRaw[], routes));
       this.wholeMenus = filterNoPermissionTree(
-        filterTree(ascending(this.constantMenus.concat(routes)))
+        filterTree(menus)
       );
       this.flatteningRoutes = formatFlatteningRoutes(
-        this.constantMenus.concat(routes) as any
+        menus
       );
     },
     /** 监听缓存页面是否存在于标签页，不存在则删除 */

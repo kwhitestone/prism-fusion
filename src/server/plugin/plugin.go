@@ -14,7 +14,8 @@ type Plugin interface {
 	// Priority 返回插件优先级，数值越小越先执行
 	// auth=10, rbac=20, 普通插件默认=100
 	Priority() int
-	// RoutePrefix 返回插件路由前缀，框架据此限定中间件作用域
+	// RoutePrefix 返回插件默认路由所有权前缀及中间件作用域。
+	// V2 Manifest.RouteScopes 可显式声明多个前缀；所有插件的路由必须属于其作用域。
 	// 默认返回 /api/v1/addons/{name}
 	RoutePrefix() string
 	// RegisterRoutes 注册插件路由到 Huma API

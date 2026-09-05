@@ -8,6 +8,7 @@ import {
   storageLocal
 } from "../utils";
 import type { UserResult } from "@/api/user";
+import { createReversibleSlot } from "@/core/reversible-slot";
 import { useMultiTagsStoreHook } from "./multiTags";
 import { type DataInfo, getToken, removeToken, userKey } from "@/utils/auth";
 import {
@@ -15,7 +16,7 @@ import {
   currentAuthSessionEpoch,
   isAuthSessionEpoch,
   withAuthSessionLock
-} from "@/addons/auth/session";
+} from "@/core/auth-session";
 
 // 默认头像
 const DEFAULT_AVATAR = new URL("@/assets/avatar.svg", import.meta.url).href;
@@ -59,29 +60,37 @@ const defaultRefreshHandler: RefreshHandler = async _data => {
 
 const defaultLogoutHandler: LogoutHandler = async _data => {};
 
-let _loginHandler: LoginHandler = defaultLoginHandler;
-let _refreshHandler: RefreshHandler = defaultRefreshHandler;
-let _userInfoHandler: UserInfoHandler | null = null;
-let _logoutHandler: LogoutHandler = defaultLogoutHandler;
+const loginHandlers = createReversibleSlot(defaultLoginHandler);
+const refreshHandlers = createReversibleSlot(defaultRefreshHandler);
+const userInfoHandlers = createReversibleSlot<UserInfoHandler | null>(null);
+const logoutHandlers = createReversibleSlot(defaultLogoutHandler);
 
 /** 设置登录处理策略（由 auth 插件调用） */
-export function setLoginHandler(handler: LoginHandler) {
-  _loginHandler = handler;
+export function setLoginHandler(handler: LoginHandler): () => void {
+  if (typeof handler !== "function")
+    throw new TypeError("Login handler must be a function");
+  return loginHandlers.set(handler);
 }
 
 /** 设置 Token 刷新策略（由 auth 插件调用） */
-export function setRefreshHandler(handler: RefreshHandler) {
-  _refreshHandler = handler;
+export function setRefreshHandler(handler: RefreshHandler): () => void {
+  if (typeof handler !== "function")
+    throw new TypeError("Refresh handler must be a function");
+  return refreshHandlers.set(handler);
 }
 
 /** 设置用户信息获取策略（由 auth 插件调用，用于页面刷新时同步用户信息） */
-export function setUserInfoHandler(handler: UserInfoHandler) {
-  _userInfoHandler = handler;
+export function setUserInfoHandler(handler: UserInfoHandler): () => void {
+  if (typeof handler !== "function")
+    throw new TypeError("User info handler must be a function");
+  return userInfoHandlers.set(handler);
 }
 
 /** 设置服务端会话注销策略（由 auth 插件调用） */
-export function setLogoutHandler(handler: LogoutHandler) {
-  _logoutHandler = handler;
+export function setLogoutHandler(handler: LogoutHandler): () => void {
+  if (typeof handler !== "function")
+    throw new TypeError("Logout handler must be a function");
+  return logoutHandlers.set(handler);
 }
 
 export const useUserStore = defineStore("pure-user", {
@@ -129,7 +138,13 @@ export const useUserStore = defineStore("pure-user", {
     /** 登入 - 通过策略注入实现，auth 插件可覆盖为真实后端调用 */
     async loginByPassword(data: { username: string; password: string }) {
       try {
-        const res = await _loginHandler(data);
+        const version = loginHandlers.version;
+        const res = await loginHandlers.get()(data);
+        if (version !== loginHandlers.version)
+          return {
+            success: false,
+            message: "认证服务已变更，请重新登录"
+          } as UserResult;
 
         if (res.success && res.data) {
           // 更新 store 中的用户信息
@@ -156,11 +171,17 @@ export const useUserStore = defineStore("pure-user", {
     /** 前端登出 */
     logOut() {
       const refreshToken = getToken()?.refreshToken;
+      const version = logoutHandlers.version;
+      const handler = logoutHandlers.get();
       this.endSession();
       const finalized = removeToken();
       if (refreshToken) {
         void finalized
-          .then(() => _logoutHandler({ refreshToken }))
+          .then(() =>
+            version === logoutHandlers.version
+              ? handler({ refreshToken })
+              : undefined
+          )
           .catch(error => console.warn("服务端会话注销失败:", error));
       }
     },
@@ -175,17 +196,24 @@ export const useUserStore = defineStore("pure-user", {
     },
     /** 刷新Token - 通过策略注入实现 */
     async handRefreshToken(data: Parameters<RefreshHandler>[0]) {
-      return _refreshHandler(data);
+      const version = refreshHandlers.version;
+      const result = await refreshHandlers.get()(data);
+      return version === refreshHandlers.version
+        ? result
+        : { success: false, sessionChanged: true };
     },
     /** 从后端刷新用户信息（头像、角色等），更新 store 和 localStorage */
     async fetchUserInfo() {
-      if (!_userInfoHandler) return;
+      const handler = userInfoHandlers.get();
+      if (!handler) return;
+      const providerVersion = userInfoHandlers.version;
       const expectedSession = getToken();
       if (!expectedSession?.sessionId) return;
       const expectedSessionId = expectedSession.sessionId;
       const expectedEpoch = currentAuthSessionEpoch();
       try {
-        const res = await _userInfoHandler();
+        const res = await handler();
+        if (providerVersion !== userInfoHandlers.version) return;
         if (res.success && res.data) {
           await commitAuthSessionResult({
             expectedSessionId,
@@ -194,6 +222,7 @@ export const useUserStore = defineStore("pure-user", {
             readSessionId: () => getToken()?.sessionId,
             isEpochCurrent: isAuthSessionEpoch,
             commit: () => {
+              if (providerVersion !== userInfoHandlers.version) return;
               const stored = storageLocal().getItem<DataInfo<number>>(userKey);
               if (!stored) return;
               const roles =

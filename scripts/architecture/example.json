@@ -1,0 +1,24 @@
+{
+  "_notes": [
+    "The business host only composes framework services and addon entrypoints; domain runtime source must live under addons.",
+    "Run via the pinned framework submodule. Host-specific source exceptions require deliberate architectural review."
+  ],
+  "serverRoot": "app/src/server",
+  "frontendRoot": "app/src/admin/src",
+  "coreFiles": [
+    "app/src/server/main.go",
+    "app/src/admin/src/main.ts"
+  ],
+  "composition": {
+    "app/src/server/main.go": [
+      "github.com/kwhitestone/prism-fusion/addons",
+      "whitestone.top/prism-example-site/addons"
+    ]
+  },
+  "frontendComposition": [
+    "app/src/admin/src/main.ts"
+  ],
+  "goDBAccess": [
+    "app/src/server/main.go"
+  ]
+}

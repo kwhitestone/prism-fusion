@@ -118,6 +118,11 @@ func TestValidateAddedPluginRoutesWithHumaAdapter(t *testing.T) {
 	); err != nil {
 		t.Fatalf("validate Huma route: %v", err)
 	}
+	response := httptest.NewRecorder()
+	engine.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/v1/addons/example/items/42", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("parameterized Huma route status = %d, body = %s", response.Code, response.Body.String())
+	}
 }
 
 func TestScopeMiddlewareForMatchesMultipleScopesOnlyOnce(t *testing.T) {
@@ -146,10 +151,9 @@ func TestScopeMiddlewareForMatchesMultipleScopesOnlyOnce(t *testing.T) {
 
 func TestValidateRouteScopeIsolationRejectsCrossPluginOverlap(t *testing.T) {
 	tests := []struct {
-		name              string
-		scopes            map[string][]string
-		scopedMiddlewares map[string]bool
-		wantErr           bool
+		name    string
+		scopes  map[string][]string
+		wantErr bool
 	}{
 		{
 			name: "broad scope reaches child plugin",
@@ -157,8 +161,7 @@ func TestValidateRouteScopeIsolationRejectsCrossPluginOverlap(t *testing.T) {
 				"gateway": {"/api/v1/addons"},
 				"auth":    {"/api/v1/addons/auth"},
 			},
-			scopedMiddlewares: map[string]bool{"gateway": true},
-			wantErr:           true,
+			wantErr: true,
 		},
 		{
 			name: "same scope reused by two plugins",
@@ -166,8 +169,7 @@ func TestValidateRouteScopeIsolationRejectsCrossPluginOverlap(t *testing.T) {
 				"first":  {"/api/v1/shared"},
 				"second": {"/api/v1/shared"},
 			},
-			scopedMiddlewares: map[string]bool{"first": true},
-			wantErr:           true,
+			wantErr: true,
 		},
 		{
 			name: "sibling segment prefixes do not overlap",
@@ -175,20 +177,18 @@ func TestValidateRouteScopeIsolationRejectsCrossPluginOverlap(t *testing.T) {
 				"auth":  {"/api/v1/addons/auth"},
 				"authz": {"/api/v1/addons/authz"},
 			},
-			scopedMiddlewares: map[string]bool{"auth": true, "authz": true},
 		},
 		{
 			name: "nested scopes owned by one plugin are allowed",
 			scopes: map[string][]string{
 				"auth": {"/api/v1/addons/auth", "/api/v1/addons/auth/admin"},
 			},
-			scopedMiddlewares: map[string]bool{"auth": true},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateRouteScopeIsolation(tt.scopes, tt.scopedMiddlewares)
+			err := validateRouteScopeIsolation(tt.scopes)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("validateRouteScopeIsolation() error = %v, wantErr %v", err, tt.wantErr)
 			}

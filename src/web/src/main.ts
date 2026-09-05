@@ -50,12 +50,11 @@ import { installPlugins } from "@/plugin/loader";
 
 getPlatformConfig(app).then(async config => {
   setupStore(app);
-  app.use(router);
-
   // 先安装插件（注入登录/刷新/用户信息策略），再等路由就绪
   // 否则 beforeEach 触发时 _userInfoHandler 等策略尚未注入
   await installPlugins(app, router);
 
+  app.use(router);
   await router.isReady();
   injectResponsiveStorage(app, config);
   app.use(MotionPlugin).use(useElementPlus).use(Table);
@@ -63,4 +62,8 @@ getPlatformConfig(app).then(async config => {
   // .use(useEcharts);
 
   app.mount("#app");
+}).catch(error => {
+  console.error("[Startup] Application initialization failed", error);
+  const root = document.querySelector("#app");
+  if (root) root.textContent = "应用初始化失败，请联系管理员并检查插件配置。";
 });

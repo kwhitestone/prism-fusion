@@ -65,7 +65,7 @@
     <mxCell id="http-core" value="核心 + Huma 路由&lt;br&gt;OpenAPI 3.1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1f2937;" vertex="1" parent="lane-http">
       <mxGeometry x="1380" y="45" width="140" height="60" as="geometry"/>
     </mxCell>
-    <mxCell id="http-plugin" value="插件路由&lt;br&gt;仅 scoped MW 插件检查新增路由 scope" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1f2937;" vertex="1" parent="lane-http">
+    <mxCell id="http-plugin" value="插件路由&lt;br&gt;所有插件归属校验&lt;br&gt;保留核心命名空间" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1f2937;" vertex="1" parent="lane-http">
       <mxGeometry x="1560" y="45" width="140" height="60" as="geometry"/>
     </mxCell>
     <mxCell id="e-host-register" value="init" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4f81bd;endArrow=classic;" edge="1" source="host-import" target="registry-register" parent="1">

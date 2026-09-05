@@ -55,9 +55,8 @@ func Routers() *gin.Engine {
 		}
 	}
 
-	// 注册插件作用域中间件（自动限定到插件的 RoutePrefix）
+	// 路由命名空间由所有插件独占，与插件是否提供作用域中间件无关。
 	pluginScopes := make(map[string][]string, len(resolvedPlugins))
-	hasScopedMiddlewares := make(map[string]bool, len(resolvedPlugins))
 	scopedMiddlewares := make(map[string][]gin.HandlerFunc, len(resolvedPlugins))
 	for _, resolved := range resolvedPlugins {
 		p := resolved.Plugin
@@ -69,11 +68,10 @@ func Routers() *gin.Engine {
 			if len(scopes) == 0 {
 				panic(fmt.Errorf("plugin %q has scoped middlewares but no route scopes", pluginID))
 			}
-			hasScopedMiddlewares[pluginID] = true
 			scopedMiddlewares[pluginID] = middlewares
 		}
 	}
-	if err := validateRouteScopeIsolation(pluginScopes, hasScopedMiddlewares); err != nil {
+	if err := validateRouteScopeIsolation(pluginScopes); err != nil {
 		panic(err)
 	}
 	for _, resolved := range resolvedPlugins {
@@ -145,6 +143,11 @@ func Routers() *gin.Engine {
 	// 注册 Huma 路由（所有API都通过Huma注册）
 	router.InitHumaRoutes(api)
 
+	// 核心路由与 system 命名空间不允许被插件声明或按其他 HTTP 方法复用。
+	if err := validateCoreRouteIsolation(pluginScopes, Router.Routes()); err != nil {
+		panic(err)
+	}
+
 	// 自动注册所有插件路由（按优先级排序）
 	for _, resolved := range resolvedPlugins {
 		p := resolved.Plugin
@@ -155,10 +158,8 @@ func Routers() *gin.Engine {
 		)
 		beforeRoutes := Router.Routes()
 		p.RegisterRoutes(api)
-		if hasScopedMiddlewares[pluginID] {
-			if err := validateAddedPluginRoutes(pluginID, resolved.Manifest.RouteScopes, beforeRoutes, Router.Routes()); err != nil {
-				panic(err)
-			}
+		if err := validateAddedPluginRoutes(pluginID, resolved.Manifest.RouteScopes, beforeRoutes, Router.Routes()); err != nil {
+			panic(err)
 		}
 	}
 	global.PRISM_LOG.Info("Plugin routes registered",
@@ -220,28 +221,58 @@ func pathMatchesScope(requestPath, scope string) bool {
 	return scope == "/" || requestPath == scope || strings.HasPrefix(requestPath, scope+"/")
 }
 
-func validateRouteScopeIsolation(pluginScopes map[string][]string, scopedMiddlewarePlugins map[string]bool) error {
+func validateRouteScopeIsolation(pluginScopes map[string][]string) error {
 	pluginIDs := make([]string, 0, len(pluginScopes))
 	for pluginID := range pluginScopes {
 		pluginIDs = append(pluginIDs, pluginID)
 	}
 	sort.Strings(pluginIDs)
-	for _, ownerID := range pluginIDs {
-		if !scopedMiddlewarePlugins[ownerID] {
-			continue
-		}
-		for _, otherID := range pluginIDs {
-			if ownerID == otherID {
-				continue
-			}
+	for index, ownerID := range pluginIDs {
+		for _, otherID := range pluginIDs[index+1:] {
 			for _, ownerScope := range pluginScopes[ownerID] {
 				for _, otherScope := range pluginScopes[otherID] {
 					if pathMatchesScope(ownerScope, otherScope) || pathMatchesScope(otherScope, ownerScope) {
 						return fmt.Errorf(
-							"plugin %q scoped middleware scope %q overlaps plugin %q scope %q",
+							"plugin %q route scope %q overlaps plugin %q scope %q",
 							ownerID, ownerScope, otherID, otherScope,
 						)
 					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// All core route prefixes are reserved across HTTP methods. Dynamic core
+// routes reserve their static parent namespace, e.g. /assets/*filepath.
+func validateCoreRouteIsolation(pluginScopes map[string][]string, coreRoutes []gin.RouteInfo) error {
+	reserved := map[string]struct{}{"/api/v1/system": {}}
+	for _, route := range coreRoutes {
+		scope := route.Path
+		if dynamic := strings.IndexAny(scope, ":*"); dynamic >= 0 {
+			scope = scope[:strings.LastIndex(scope[:dynamic], "/")]
+			if scope == "" {
+				scope = "/"
+			}
+		}
+		reserved[scope] = struct{}{}
+	}
+	coreScopes := make([]string, 0, len(reserved))
+	for scope := range reserved {
+		coreScopes = append(coreScopes, scope)
+	}
+	sort.Strings(coreScopes)
+	pluginIDs := make([]string, 0, len(pluginScopes))
+	for pluginID := range pluginScopes {
+		pluginIDs = append(pluginIDs, pluginID)
+	}
+	sort.Strings(pluginIDs)
+	for _, pluginID := range pluginIDs {
+		for _, scope := range pluginScopes[pluginID] {
+			for _, coreScope := range coreScopes {
+				if pathMatchesScope(scope, coreScope) || pathMatchesScope(coreScope, scope) {
+					return fmt.Errorf("plugin %q route scope %q overlaps reserved core scope %q", pluginID, scope, coreScope)
 				}
 			}
 		}

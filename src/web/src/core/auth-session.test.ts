@@ -12,7 +12,7 @@ import {
   invalidateAuthSession,
   isAuthSessionEpoch,
   readAuthBindingWithLock
-} from "./session.js";
+} from "./auth-session.js";
 
 test("an anonymous 401 cannot be refreshed or replayed after login", () => {
   assert.equal(canRecoverAuthFailure(undefined), false);

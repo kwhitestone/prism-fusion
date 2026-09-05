@@ -5,7 +5,7 @@ import {
   invalidateAuthSession,
   observeAuthSession,
   withAuthSessionLock
-} from "@/addons/auth/session";
+} from "@/core/auth-session";
 
 export interface DataInfo<T> {
   /** token */

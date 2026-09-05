@@ -1,232 +1,120 @@
 import type { App } from "vue";
 import type { Router, RouteRecordRaw } from "vue-router";
-import type {
-  PluginModule,
-  PluginStatus,
-  ReportMenuItem,
-  PluginRegistryPayload
-} from "./types";
-import { constantMenus } from "@/router/index";
+import type { PluginModule, PluginStatus, ReportMenuItem, PluginRegistryPayload } from "./types";
+import { router as frameworkRouter, commitPluginRoutes, clearPluginRoutes } from "@/router/index";
+import { PluginRegistry } from "./registry";
+import { PluginRuntime } from "./runtime";
 import service from "@/utils/request";
 
-/**
- * 自动扫描 addons 目录下所有插件
- * Vite 会在构建时静态分析这个 glob pattern
- */
 const pluginModules = import.meta.glob<{ default: PluginModule }>(
-  "../addons/*/index.ts",
-  { eager: true }
+  "../addons/*/index.ts", { eager: true }
 );
 
-/** 外部注入的插件列表（业务项目通过 registerExternalPlugins 注册） */
-let externalPlugins: PluginModule[] = [];
+// Lazy construction lets eager addon imports finish evaluating first.
+let registry: PluginRegistry | undefined;
+let runtime: PluginRuntime | undefined;
+let started = false;
+let installing: Promise<PluginStatus[]> | undefined;
+let uninstalling: Promise<void> | undefined;
+let host: { app: App; router: Router } | undefined;
+let committed = false;
+let generation = 0;
 
-/** 已加载的插件列表 */
-const loadedPlugins: PluginModule[] = [];
-
-/** 插件加载状态 */
-const pluginStatuses: PluginStatus[] = [];
-
-/**
- * 注册外部插件（业务项目在 installPlugins 之前调用）
- * @param plugins 业务插件列表
- */
-export function registerExternalPlugins(plugins: PluginModule[]) {
-  externalPlugins = plugins;
-}
-
-/**
- * 获取所有已发现的插件（内置 + 外部）
- */
-export function getPlugins(): PluginModule[] {
-  const builtin = Object.values(pluginModules).map(mod => mod.default);
-  return [...builtin, ...externalPlugins];
-}
-
-/**
- * 获取已加载的插件列表
- */
-export function getLoadedPlugins(): PluginModule[] {
-  return loadedPlugins;
-}
-
-/**
- * 获取插件加载状态
- */
-export function getPluginStatuses(): PluginStatus[] {
-  return pluginStatuses;
-}
-
-/**
- * 获取所有插件路由
- */
-export function getPluginRoutes(): RouteRecordRaw[] {
-  const routes: RouteRecordRaw[] = [];
-  for (const plugin of loadedPlugins) {
-    if (plugin.routes && plugin.routes.length > 0) {
-      routes.push(...plugin.routes);
-    }
+function getRegistry(): PluginRegistry {
+  if (!registry) {
+    const candidate = new PluginRegistry();
+    Object.values(pluginModules).forEach(module => candidate.register(module.default));
+    registry = candidate;
   }
-  return routes;
+  return registry;
 }
 
-/**
- * 安装所有插件
- * @param app Vue 应用实例
- * @param router Vue Router 实例
- */
-export async function installPlugins(
-  app: App,
-  router: Router
-): Promise<PluginStatus[]> {
-  const plugins = getPlugins();
+/** Add a batch atomically before startup. Duplicate IDs never replace builtins. */
+export function registerExternalPlugins(plugins: PluginModule[]): void {
+  if (started) throw new Error("Plugin registration is frozen after startup begins");
+  const candidate = new PluginRegistry();
+  [...getRegistry().getPlugins(), ...plugins].forEach(plugin => candidate.register(plugin));
+  registry = candidate;
+}
 
-  console.log(`[Plugin] Discovered ${plugins.length} plugin(s)`);
+export function getPlugins(): PluginModule[] { return getRegistry().getPlugins(); }
+export function getLoadedPlugins(): PluginModule[] { return runtime?.getLoadedPlugins() ?? []; }
+export function getPluginStatuses(): PluginStatus[] { return runtime?.getStatuses() ?? []; }
+export function getPluginRoutes(): RouteRecordRaw[] { return runtime?.getRoutes() ?? []; }
 
-  for (const plugin of plugins) {
-    const status: PluginStatus = {
-      name: plugin.name,
-      loaded: false
-    };
-
+/** Menus become visible only after the startup transaction succeeds. */
+export async function installPlugins(app: App, router: Router): Promise<PluginStatus[]> {
+  if (router !== frameworkRouter) throw new Error("installPlugins requires the framework router");
+  if (uninstalling) throw new Error("Await plugin cleanup before installing");
+  if (host && (host.app !== app || host.router !== router)) {
+    throw new Error("Plugin runtime cannot be installed into a different host");
+  }
+  if (committed) return getPluginStatuses();
+  if (installing) { await installing; return getPluginStatuses(); }
+  host = { app, router };
+  started = true;
+  runtime ??= new PluginRuntime(getRegistry());
+  const currentGeneration = generation;
+  installing = Promise.resolve().then(async () => {
+    if (currentGeneration !== generation) throw new Error("Plugin startup cancelled");
+    await runtime.install(app, router);
+    if (currentGeneration !== generation) throw new Error("Plugin startup cancelled");
     try {
-      console.log(`[Plugin] Loading: ${plugin.name}`);
-
-      // 1. 注册全局组件
-      if (plugin.components) {
-        for (const [name, component] of Object.entries(plugin.components)) {
-          app.component(name, component);
-          console.log(`[Plugin] Registered component: ${name}`);
-        }
-      }
-
-      // 2. 注册路由（添加到根路由下）
-      if (plugin.routes && plugin.routes.length > 0) {
-        for (const route of plugin.routes) {
-          router.addRoute(route);
-          console.log(`[Plugin] Added route: ${route.path}`);
-        }
-      }
-
-      // 3. 调用 install 钩子
-      if (plugin.install) {
-        plugin.install(app);
-      }
-
-      // 4. 调用 setup 钩子（异步）
-      if (plugin.setup) {
-        await plugin.setup();
-      }
-
-      status.loaded = true;
-      loadedPlugins.push(plugin);
-      console.log(`[Plugin] Loaded successfully: ${plugin.name}`);
+      commitPluginRoutes(runtime.getRoutes());
+      committed = true;
+      return runtime.getStatuses();
     } catch (error) {
-      status.error = error instanceof Error ? error.message : String(error);
-      console.error(`[Plugin] Failed to load ${plugin.name}:`, error);
+      await runtime.uninstall();
+      clearPluginRoutes();
+      throw error;
     }
-
-    pluginStatuses.push(status);
-  }
-
-  console.log(
-    `[Plugin] Finished loading. Success: ${loadedPlugins.length}, Failed: ${pluginStatuses.filter(s => !s.loaded).length}`
-  );
-
-  // ===== 修复: 将外部插件路由注入 constantMenus 以显示菜单 =====
-  const externalRoutes: RouteRecordRaw[] = [];
-  for (const plugin of externalPlugins) {
-    if (plugin.routes && plugin.routes.length > 0) {
-      externalRoutes.push(...plugin.routes);
-    }
-  }
-  if (externalRoutes.length > 0) {
-    constantMenus.push(...(externalRoutes.flat(Infinity) as any[]));
-    // 重新按 rank 排序
-    constantMenus.sort((a: any, b: any) => {
-      return (a.meta?.rank ?? 99) - (b.meta?.rank ?? 99);
-    });
-    console.log(
-      `[Plugin] Injected ${externalRoutes.length} external route(s) into menus`
-    );
-  }
-
-  return pluginStatuses;
-}
-
-/**
- * 从路由配置中提取菜单元数据（去除 component 等不可序列化字段）
- */
-function extractMenus(routes?: RouteRecordRaw[]): ReportMenuItem[] {
-  if (!routes || routes.length === 0) return [];
-  return routes.flat(Infinity).map((route: any) => {
-    const item: ReportMenuItem = {
-      path: route.path,
-      name: route.name as string,
-      title: route.meta?.title,
-      icon: route.meta?.icon,
-      rank: route.meta?.rank,
-      showLink: route.meta?.showLink
-    };
-    if (route.children && route.children.length > 0) {
-      item.children = extractMenus(route.children);
-    }
-    return item;
   });
+  try { await installing; return getPluginStatuses(); }
+  finally { installing = undefined; }
 }
 
-/**
- * 上报插件注册信息（菜单 + 权限）到后端
- * 每次前端刷新时调用，后端收到后打印记录
- */
-async function reportPluginRegistry(plugins: PluginModule[]) {
+function extractMenus(routes: RouteRecordRaw[] = []): ReportMenuItem[] {
+  return routes.map(route => ({
+    path: route.path,
+    name: typeof route.name === "string" ? route.name : undefined,
+    title: route.meta?.title,
+    icon: typeof route.meta?.icon === "string" ? route.meta.icon : undefined,
+    rank: typeof route.meta?.rank === "number" ? route.meta.rank : undefined,
+    showLink: route.meta?.showLink,
+    ...(route.children?.length ? { children: extractMenus(route.children) } : {})
+  }));
+}
+
+/** Reporting is observability, not part of the startup transaction. */
+async function reportPluginRegistry(plugins: PluginModule[]): Promise<void> {
   const payload: PluginRegistryPayload = {
-    plugins: plugins.map(p => ({
-      name: p.name,
-      description: p.description,
-      version: p.version,
-      menus: extractMenus(p.routes),
-      permissions: p.permissions || []
+    plugins: plugins.map(plugin => ({
+      name: plugin.name, description: plugin.description, version: plugin.manifest?.version ?? plugin.version,
+      menus: extractMenus(plugin.routes), permissions: plugin.permissions ?? []
     }))
   };
-
-  console.log("[Plugin] Reporting registry to backend:", payload);
-
   try {
-    await service({
-      url: "/api/v1/system/plugin-registry",
-      method: "post",
-      data: payload,
-      donNotShowLoading: true
-    });
-    console.log("[Plugin] Registry reported successfully");
+    await service({ url: "/api/v1/system/plugin-registry", method: "post",
+      data: payload, donNotShowLoading: true });
   } catch (error) {
-    // 上报失败不影响前端运行
     console.warn("[Plugin] Failed to report registry:", error);
   }
 }
 
-/**
- * 登录成功后主动上报插件注册表（需在拿到 token 之后调用）
- */
 export function triggerPluginRegistryReport(): void {
-  reportPluginRegistry(loadedPlugins);
+  void reportPluginRegistry(getLoadedPlugins());
 }
 
-/**
- * 卸载所有插件（用于热更新或清理）
- */
-export function uninstallPlugins(): void {
-  for (const plugin of loadedPlugins) {
-    if (plugin.destroy) {
-      try {
-        plugin.destroy();
-        console.log(`[Plugin] Destroyed: ${plugin.name}`);
-      } catch (error) {
-        console.error(`[Plugin] Failed to destroy ${plugin.name}:`, error);
-      }
-    }
-  }
-  loadedPlugins.length = 0;
-  pluginStatuses.length = 0;
+export async function uninstallPlugins(): Promise<void> {
+  if (uninstalling) return uninstalling;
+  generation++;
+  uninstalling = Promise.resolve().then(async () => {
+    await runtime?.uninstall();
+    if (installing) { try { await installing; } catch { /* Startup failed closed. */ } }
+    clearPluginRoutes();
+    committed = false;
+    host = undefined;
+  });
+  try { await uninstalling; }
+  finally { uninstalling = undefined; }
 }

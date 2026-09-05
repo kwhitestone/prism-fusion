@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import ts from "typescript";
 
-const sourceDirectory = new URL("../src/addons/auth/", import.meta.url);
+const sourceDirectory = new URL("../src/core/", import.meta.url);
 const temporaryDirectory = await mkdtemp(
   join(tmpdir(), "prism-fusion-session-tests-")
 );
@@ -14,7 +14,7 @@ try {
     join(temporaryDirectory, "package.json"),
     JSON.stringify({ type: "module" })
   );
-  for (const sourceName of ["session.ts", "session.test.ts"]) {
+  for (const sourceName of ["auth-session.ts", "auth-session.test.ts"]) {
     const source = await readFile(new URL(sourceName, sourceDirectory), "utf8");
     const output = ts.transpileModule(source, {
       compilerOptions: {
@@ -32,7 +32,7 @@ try {
   const exitCode = await new Promise(resolve => {
     const child = spawn(
       process.execPath,
-      [join(temporaryDirectory, "session.test.js")],
+      [join(temporaryDirectory, "auth-session.test.js")],
       { stdio: "inherit" }
     );
     child.on("exit", code => resolve(code ?? 1));

@@ -1,0 +1,340 @@
+{
+  "_notes": [
+    "Core file inventory is intentionally exact; new framework runtime files require architectural review and a policy change.",
+    "Rules apply to inventoried files too. Addons may declare business code but must use declarative frontend routes.",
+    "Auth session coordination is neutral core infrastructure; concrete auth APIs stay in addons.",
+    "Shell paths, generic base models and plugin-registry telemetry are framework infrastructure, not business features.",
+    "This mechanical boundary guard does not prove arbitrary business semantics; code review remains required."
+  ],
+  "serverRoot": "src/server",
+  "frontendRoot": "src/web/src",
+  "coreFiles": [
+    "src/server/api/v1/enter.go",
+    "src/server/config/auth.go",
+    "src/server/config/captcha.go",
+    "src/server/config/config.go",
+    "src/server/config/cors.go",
+    "src/server/config/jwt.go",
+    "src/server/config/mysql.go",
+    "src/server/config/sqlite.go",
+    "src/server/config/system.go",
+    "src/server/config/zap.go",
+    "src/server/core/server.go",
+    "src/server/core/server_run.go",
+    "src/server/core/viper.go",
+    "src/server/core/zap.go",
+    "src/server/global/global.go",
+    "src/server/global/model.go",
+    "src/server/initialize/gorm.go",
+    "src/server/initialize/router.go",
+    "src/server/initialize/tables.go",
+    "src/server/main.go",
+    "src/server/middleware/cors.go",
+    "src/server/middleware/logger.go",
+    "src/server/model/common.go",
+    "src/server/model/local_time.go",
+    "src/server/plugin/base.go",
+    "src/server/plugin/manifest.go",
+    "src/server/plugin/migration.go",
+    "src/server/plugin/plugin.go",
+    "src/server/plugin/registry.go",
+    "src/server/router/huma.go",
+    "src/server/router/plugin_registry.go",
+    "src/server/router/redoc.go",
+    "src/server/router/scalar.go",
+    "src/server/service/enter.go",
+    "src/server/utils/directory.go",
+    "src/server/utils/response.go",
+    "src/server/utils/rotatelogs.go",
+    "src/web/src/App.vue",
+    "src/web/src/api/routes.ts",
+    "src/web/src/api/user.ts",
+    "src/web/src/assets/iconfont/iconfont.js",
+    "src/web/src/components/CopyrightFooter/index.ts",
+    "src/web/src/components/CopyrightFooter/src/index.vue",
+    "src/web/src/components/ReIcon/index.ts",
+    "src/web/src/components/ReIcon/src/hooks.ts",
+    "src/web/src/components/ReIcon/src/iconfont.ts",
+    "src/web/src/components/ReIcon/src/iconifyIconOffline.ts",
+    "src/web/src/components/ReIcon/src/iconifyIconOnline.ts",
+    "src/web/src/components/ReIcon/src/offlineIcon.ts",
+    "src/web/src/components/ReIcon/src/types.ts",
+    "src/web/src/components/ReSegmented/index.ts",
+    "src/web/src/components/ReSegmented/src/index.tsx",
+    "src/web/src/components/ReSegmented/src/type.ts",
+    "src/web/src/components/ReText/index.ts",
+    "src/web/src/components/ReText/src/index.vue",
+    "src/web/src/config/index.ts",
+    "src/web/src/core/auth-session.ts",
+    "src/web/src/core/config-web.ts",
+    "src/web/src/core/index.ts",
+    "src/web/src/core/reversible-slot.ts",
+    "src/web/src/directives/auth/index.ts",
+    "src/web/src/directives/copy/index.ts",
+    "src/web/src/directives/index.ts",
+    "src/web/src/directives/longpress/index.ts",
+    "src/web/src/directives/optimize/index.ts",
+    "src/web/src/directives/perms/index.ts",
+    "src/web/src/directives/ripple/index.ts",
+    "src/web/src/layout/components/lay-content/index.vue",
+    "src/web/src/layout/components/lay-footer/index.vue",
+    "src/web/src/layout/components/lay-frame/index.vue",
+    "src/web/src/layout/components/lay-navbar/index.vue",
+    "src/web/src/layout/components/lay-notice/components/NoticeItem.vue",
+    "src/web/src/layout/components/lay-notice/components/NoticeList.vue",
+    "src/web/src/layout/components/lay-notice/data.ts",
+    "src/web/src/layout/components/lay-notice/index.vue",
+    "src/web/src/layout/components/lay-panel/index.vue",
+    "src/web/src/layout/components/lay-search/components/SearchFooter.vue",
+    "src/web/src/layout/components/lay-search/components/SearchHistory.vue",
+    "src/web/src/layout/components/lay-search/components/SearchHistoryItem.vue",
+    "src/web/src/layout/components/lay-search/components/SearchModal.vue",
+    "src/web/src/layout/components/lay-search/components/SearchResult.vue",
+    "src/web/src/layout/components/lay-search/index.vue",
+    "src/web/src/layout/components/lay-search/types.ts",
+    "src/web/src/layout/components/lay-setting/index.vue",
+    "src/web/src/layout/components/lay-sidebar/NavHorizontal.vue",
+    "src/web/src/layout/components/lay-sidebar/NavMix.vue",
+    "src/web/src/layout/components/lay-sidebar/NavVertical.vue",
+    "src/web/src/layout/components/lay-sidebar/components/SidebarBreadCrumb.vue",
+    "src/web/src/layout/components/lay-sidebar/components/SidebarCenterCollapse.vue",
+    "src/web/src/layout/components/lay-sidebar/components/SidebarExtraIcon.vue",
+    "src/web/src/layout/components/lay-sidebar/components/SidebarFullScreen.vue",
+    "src/web/src/layout/components/lay-sidebar/components/SidebarItem.vue",
+    "src/web/src/layout/components/lay-sidebar/components/SidebarLeftCollapse.vue",
+    "src/web/src/layout/components/lay-sidebar/components/SidebarLinkItem.vue",
+    "src/web/src/layout/components/lay-sidebar/components/SidebarLogo.vue",
+    "src/web/src/layout/components/lay-sidebar/components/SidebarTopCollapse.vue",
+    "src/web/src/layout/components/lay-tag/components/TagChrome.vue",
+    "src/web/src/layout/components/lay-tag/index.vue",
+    "src/web/src/layout/frame.vue",
+    "src/web/src/layout/hooks/useBoolean.ts",
+    "src/web/src/layout/hooks/useDataThemeChange.ts",
+    "src/web/src/layout/hooks/useLayout.ts",
+    "src/web/src/layout/hooks/useMultiFrame.ts",
+    "src/web/src/layout/hooks/useNav.ts",
+    "src/web/src/layout/hooks/useTag.ts",
+    "src/web/src/layout/index.vue",
+    "src/web/src/layout/redirect.vue",
+    "src/web/src/layout/types.ts",
+    "src/web/src/main.ts",
+    "src/web/src/plugin/host-routes.ts",
+    "src/web/src/plugin/index.ts",
+    "src/web/src/plugin/loader.ts",
+    "src/web/src/plugin/navigation.ts",
+    "src/web/src/plugin/registry.ts",
+    "src/web/src/plugin/runtime.ts",
+    "src/web/src/plugin/types.ts",
+    "src/web/src/plugins/echarts.ts",
+    "src/web/src/plugins/elementPlus.ts",
+    "src/web/src/router/index.ts",
+    "src/web/src/router/modules/error.ts",
+    "src/web/src/router/modules/home.ts",
+    "src/web/src/router/modules/remaining.ts",
+    "src/web/src/router/utils.ts",
+    "src/web/src/store/index.ts",
+    "src/web/src/store/modules/app-web.ts",
+    "src/web/src/store/modules/app.ts",
+    "src/web/src/store/modules/epTheme.ts",
+    "src/web/src/store/modules/loginUI.ts",
+    "src/web/src/store/modules/multiTags.ts",
+    "src/web/src/store/modules/permission.ts",
+    "src/web/src/store/modules/settings.ts",
+    "src/web/src/store/modules/user.ts",
+    "src/web/src/store/pinia-web.ts",
+    "src/web/src/store/types.ts",
+    "src/web/src/store/utils.ts",
+    "src/web/src/types/api.types.ts",
+    "src/web/src/types/app.types.ts",
+    "src/web/src/types/auth.types.ts",
+    "src/web/src/types/index.ts",
+    "src/web/src/types/utils.types.ts",
+    "src/web/src/utils/apiCache.ts",
+    "src/web/src/utils/auth.ts",
+    "src/web/src/utils/globalPolyfills.ts",
+    "src/web/src/utils/http/index.ts",
+    "src/web/src/utils/http/types.d.ts",
+    "src/web/src/utils/localforage/index.ts",
+    "src/web/src/utils/localforage/types.d.ts",
+    "src/web/src/utils/message.ts",
+    "src/web/src/utils/mitt.ts",
+    "src/web/src/utils/preventDefault.ts",
+    "src/web/src/utils/print.ts",
+    "src/web/src/utils/progress/index.ts",
+    "src/web/src/utils/propTypes.ts",
+    "src/web/src/utils/request.ts",
+    "src/web/src/utils/responsive.ts",
+    "src/web/src/utils/sso.ts",
+    "src/web/src/utils/tree.ts",
+    "src/web/src/views/error/403.vue",
+    "src/web/src/views/error/404-web.vue",
+    "src/web/src/views/error/404.vue",
+    "src/web/src/views/error/500.vue",
+    "src/web/src/views/login/callback.vue",
+    "src/web/src/views/login/index.vue",
+    "src/web/src/views/login/utils/motion.ts",
+    "src/web/src/views/login/utils/rule.ts",
+    "src/web/src/views/login/utils/static.ts",
+    "src/web/src/views/welcome/index.vue"
+  ],
+  "composition": {
+    "src/server/main.go": [
+      "github.com/kwhitestone/prism-fusion/addons"
+    ]
+  },
+  "frontendComposition": [
+    "src/web/src/main.ts"
+  ],
+  "discovery": {
+    "src/web/src/plugin/loader.ts": [
+      "../addons/*/index.ts"
+    ]
+  },
+  "routeMutators": {
+    "src/web/src/router/index.ts": [
+      "createRouter"
+    ],
+    "src/web/src/router/utils.ts": [
+      "addPathMatch"
+    ],
+    "src/web/src/plugin/host-routes.ts": [
+      "restore"
+    ],
+    "src/web/src/plugin/runtime.ts": [
+      "start",
+      "cleanup"
+    ]
+  },
+  "routePaths": {
+    "src/web/src/router/index.ts": [
+      "/login",
+      "/error/403",
+      "/error/404"
+    ],
+    "src/web/src/router/utils.ts": [
+      "/:pathMatch(.*)*"
+    ],
+    "src/web/src/router/modules/home.ts": [
+      "/",
+      "/welcome"
+    ],
+    "src/web/src/router/modules/error.ts": [
+      "/error",
+      "/error/403",
+      "/error/404",
+      "/error/500"
+    ],
+    "src/web/src/router/modules/remaining.ts": [
+      "/login",
+      "/login/callback",
+      "/access-denied",
+      "/server-error",
+      "/redirect",
+      "/redirect/:path(.*)"
+    ],
+    "src/web/src/layout/types.ts": [
+      "/welcome"
+    ],
+    "src/web/src/layout/components/lay-sidebar/components/SidebarItem.vue": [
+      ""
+    ]
+  },
+  "apiURLs": {
+    "src/web/src/plugin/loader.ts": [
+      "/api/v1/system/plugin-registry"
+    ],
+    "src/web/src/core/config-web.ts": [
+      "/api"
+    ],
+    "src/web/src/config/index.ts": [
+      "`${VITE_PUBLIC_PATH}platform-config.json`"
+    ]
+  },
+  "stores": {
+    "src/web/src/store/modules/user.ts": [
+      "pure-user"
+    ],
+    "src/web/src/store/modules/epTheme.ts": [
+      "pure-epTheme"
+    ],
+    "src/web/src/store/modules/app-web.ts": [
+      "app"
+    ],
+    "src/web/src/store/modules/settings.ts": [
+      "pure-setting"
+    ],
+    "src/web/src/store/modules/loginUI.ts": [
+      "login-ui"
+    ],
+    "src/web/src/store/modules/permission.ts": [
+      "pure-permission"
+    ],
+    "src/web/src/store/modules/multiTags.ts": [
+      "pure-multiTags"
+    ],
+    "src/web/src/store/modules/app.ts": [
+      "pure-app"
+    ]
+  },
+  "goRouteCalls": {
+    "src/server/initialize/router.go": [
+      "Routers:GET",
+      "Routers:Static",
+      "Routers:StaticFile",
+      "Routers:NoRoute"
+    ],
+    "src/server/router/redoc.go": [
+      "InitRedocRouter:GET"
+    ],
+    "src/server/router/scalar.go": [
+      "InitScalarRouter:GET"
+    ],
+    "src/server/router/plugin_registry.go": [
+      "InitPluginRegistryRoutes:Register"
+    ]
+  },
+  "goRoutePaths": {
+    "src/server/initialize/router.go": [
+      "/static",
+      "/assets",
+      "/favicon.ico",
+      "/platform-config.json",
+      "/logo.svg",
+      "/health"
+    ],
+    "src/server/router/redoc.go": [
+      "/redoc"
+    ],
+    "src/server/router/scalar.go": [
+      "/scalar"
+    ],
+    "src/server/router/plugin_registry.go": [
+      "/api/v1/system/plugin-registry"
+    ]
+  },
+  "goDatabaseCalls": {
+    "src/server/initialize/tables.go": [
+      "migratePluginModels:AutoMigrate"
+    ]
+  },
+  "goDBAccess": [
+    "src/server/main.go",
+    "src/server/initialize/tables.go"
+  ],
+  "goModelTypes": {
+    "src/server/model/common.go": [
+      "MODEL"
+    ],
+    "src/server/global/model.go": [
+      "MODEL"
+    ]
+  },
+  "emptyGoTypes": {
+    "src/server/api/v1/enter.go": [
+      "ApiGroup"
+    ],
+    "src/server/service/enter.go": [
+      "ServiceGroup"
+    ]
+  }
+}

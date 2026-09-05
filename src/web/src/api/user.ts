@@ -1,6 +1,3 @@
-import service from "@/utils/request";
-import type { BaseResponse, UserInfo } from "@/types";
-
 export type UserResult = {
   success: boolean;
   message?: string;
@@ -44,80 +41,4 @@ export type RefreshTokenResult = {
   };
 };
 
-// 注意：登录已改为前端直接调用 UC，不再需要后端接口
-// getLogin, loginByToken, login, getUserInfo 已移除
-
-/**
- * 用户注册
- * @param data 注册信息
- * @returns Promise<BaseResponse>
- */
-export const register = (data: {
-  username: string;
-  password: string;
-  nickName: string;
-  headerImg?: string;
-  authorityId?: number;
-}): Promise<BaseResponse> => {
-  return service({
-    url: "/user/admin_register",
-    method: "post",
-    data
-  });
-};
-
-/**
- * 修改密码
- * @param data 密码信息
- * @returns Promise<BaseResponse>
- */
-export const changePassword = (data: {
-  username: string;
-  password: string;
-  newPassword: string;
-}): Promise<BaseResponse> => {
-  return service({
-    url: "/user/changePassword",
-    method: "post",
-    data
-  });
-};
-
-/**
- * 重置密码
- * @param data 重置信息
- * @returns Promise<BaseResponse>
- */
-export const resetPassword = (data: { ID: number }): Promise<BaseResponse> => {
-  return service({
-    url: "/user/resetPassword",
-    method: "post",
-    data
-  });
-};
-
-/**
- * 设置用户信息
- * @param data 用户信息
- * @returns Promise<BaseResponse>
- */
-export const setUserInfo = (data: Partial<UserInfo>): Promise<BaseResponse> => {
-  return service({
-    url: "/user/setUserInfo",
-    method: "put",
-    data
-  });
-};
-
-/**
- * 设置自身信息
- * @param data 用户信息
- * @returns Promise<BaseResponse>
- */
-export const setSelfInfo = (data: Partial<UserInfo>): Promise<BaseResponse> => {
-  return service({
-    url: "/user/setSelfInfo",
-    method: "put",
-    data
-  });
-};
+// Concrete authentication HTTP operations are owned by addons/auth/api.

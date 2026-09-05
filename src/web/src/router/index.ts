@@ -2,32 +2,30 @@
 import Cookies from "js-cookie";
 import { getConfig } from "@/config";
 import NProgress from "@/utils/progress";
-import { buildHierarchyTree } from "@/utils/tree";
 import remainingRouter from "./modules/remaining";
+import homeRoute from "./modules/home";
+import errorRoute from "./modules/error";
+import { HostRoutes, type PluginHostOptions } from "@/plugin/host-routes";
+import { message } from "@/utils/message";
 import { useMultiTagsStoreHook } from "@/store/modules/multiTags";
 import { usePermissionStoreHook } from "@/store/modules/permission";
 import {
   isUrl,
   openLink,
-  cloneDeep,
   isAllEmpty,
   storageLocal
 } from "@pureadmin/utils";
 import {
-  ascending,
   getTopMenu,
   initRouter,
   isOneOfArray,
   getHistoryMode,
   findRouteByPath,
-  handleAliveRoute,
-  formatTwoStageRoutes,
-  formatFlatteningRoutes
+  handleAliveRoute
 } from "./utils";
 import {
   type Router,
   type RouteRecordRaw,
-  type RouteComponent,
   createRouter
 } from "vue-router";
 import {
@@ -39,71 +37,36 @@ import {
 } from "@/utils/auth";
 import { useUserStoreHook } from "@/store/modules/user";
 
-/** 自动导入全部静态路由，无需再手动引入！匹配 src/router/modules 目录（任何嵌套级别）中具有 .ts 扩展名的所有文件，除了 remaining.ts 文件
- * 如何匹配所有文件请看：https://github.com/mrmlnc/fast-glob#basic-syntax
- * 如何排除文件请看：https://cn.vitejs.dev/guide/features.html#negative-patterns
- */
-const modules: Record<string, any> = import.meta.glob(
-  ["./modules/**/*.ts", "!./modules/**/remaining.ts"],
-  {
-    eager: true
-  }
-);
+/** Explicit shell routes; all addon routes enter through the plugin runtime. */
+export const constantRoutes: RouteRecordRaw[] = [homeRoute, errorRoute];
+const hostRoutes = new HostRoutes([...constantRoutes, ...remainingRouter as RouteRecordRaw[]]);
+export let constantMenus = hostRoutes.getMenus();
 
-/** 自动导入插件路由 */
-const addonModules: Record<string, any> = import.meta.glob(
-  "../addons/*/router/index.ts",
-  {
-    eager: true
-  }
-);
-
-/** 原始静态路由（未做任何处理） */
-const routes = [];
-
-Object.keys(modules).forEach(key => {
-  routes.push(modules[key].default);
-});
-
-/** 插件路由 */
-const addonRoutes = [];
-Object.keys(addonModules).forEach(key => {
-  const addonRoute = addonModules[key].default;
-  if (addonRoute) {
-    addonRoutes.push(addonRoute);
-    console.log(`[Plugin Router] Loaded: ${key}`);
-  }
-});
-
-/** 外部注入的插件路由（业务项目通过 registerExternalRoutes 注册） */
-let externalAddonRoutes: RouteRecordRaw[] = [];
-
-/**
- * 注册外部插件路由（业务项目在 router 创建前调用）
- * @param routes 业务插件路由列表
- */
-export function registerExternalRoutes(routes: RouteRecordRaw[]) {
-  externalAddonRoutes = routes;
+/** @deprecated Routes need plugin ownership. Register a PluginModule instead. */
+export function registerExternalRoutes(_routes: RouteRecordRaw[]): never {
+  throw new Error("registerExternalRoutes is unsupported; use registerExternalPlugins with a PluginModule");
 }
 
-/** 导出处理后的静态路由（三级及以上的路由全部拍成二级） */
-export const constantRoutes: Array<RouteRecordRaw> = formatTwoStageRoutes(
-  formatFlatteningRoutes(
-    buildHierarchyTree(
-      ascending(
-        routes.concat(addonRoutes).concat(externalAddonRoutes).flat(Infinity)
-      )
-    )
-  )
-);
+export function configurePluginHost(options: PluginHostOptions): void {
+  hostRoutes.configure(options);
+}
 
-/** 初始的静态路由，用于退出登录时重置路由 */
-const initConstantRoutes: Array<RouteRecordRaw> = cloneDeep(constantRoutes);
+/** Only the loader calls this after all active addons were installed. */
+export function commitPluginRoutes(routes: RouteRecordRaw[]): void {
+  hostRoutes.commit(routes);
+  // Rebuild from the committed snapshot: session cleanup may have reset the
+  // live router while an asynchronous addon setup was still running.
+  hostRoutes.restore(router);
+  constantMenus = hostRoutes.getMenus();
+  usePermissionStoreHook().setStaticMenus(constantMenus);
+}
 
-/** 用于渲染菜单，保持原始层级 */
-export const constantMenus: Array<RouteComponent> = ascending(
-  routes.concat(addonRoutes).concat(externalAddonRoutes).flat(Infinity)
-).concat(...remainingRouter);
+export function clearPluginRoutes(): void {
+  hostRoutes.clear();
+  hostRoutes.restore(router);
+  constantMenus = hostRoutes.getMenus();
+  usePermissionStoreHook().setStaticMenus(constantMenus);
+}
 
 /** 不参与菜单的路由 */
 export const remainingPaths = Object.keys(remainingRouter).map(v => {
@@ -140,19 +103,7 @@ export function resetLoadedPaths() {
 
 /** 重置路由 */
 export function resetRouter() {
-  router.clearRoutes();
-  for (const route of initConstantRoutes.concat(...(remainingRouter as any))) {
-    router.addRoute(route);
-  }
-  router.options.routes = formatTwoStageRoutes(
-    formatFlatteningRoutes(
-      buildHierarchyTree(
-        ascending(
-          routes.concat(addonRoutes).concat(externalAddonRoutes).flat(Infinity)
-        )
-      )
-    )
-  );
+  hostRoutes.restore(router);
   usePermissionStoreHook().clearAllCachePage();
   resetLoadedPaths();
 }
@@ -220,7 +171,7 @@ router.beforeEach((to: ToRouteType, _from, next) => {
             const { path } = to;
             const route = findRouteByPath(
               path,
-              router.options.routes[0].children
+              [...router.options.routes]
             );
             getTopMenu(true);
             // query、params模式路由传参数的标签页不在此处处理
@@ -244,7 +195,11 @@ router.beforeEach((to: ToRouteType, _from, next) => {
             }
           }
           // 确保动态路由完全加入路由列表并且不影响静态路由（注意：动态路由刷新时router.beforeEach可能会触发两次，第一次触发动态路由还未完全添加，第二次动态路由才完全添加到路由列表，如果需要在router.beforeEach做一些判断可以在to.name存在的条件下去判断，这样就只会触发一次）
-          if (isAllEmpty(to.name)) router.push(to.fullPath);
+          if (isAllEmpty(to.name)) void router.replace(to.fullPath);
+        }).catch(error => {
+          console.warn("[Router] Navigation initialization failed", error);
+          message("菜单加载失败，请刷新页面重试", { type: "error" });
+          NProgress.done();
         });
       }
       toCorrectRoute();

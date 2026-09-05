@@ -2,7 +2,11 @@
 import { createPinia } from "pinia";
 
 export const store = createPinia();
-export const router = { push: () => undefined };
+export const router = {
+  push: (path: string) => {
+    navigations = [...navigations, { path, sessionId: token?.sessionId }];
+  }
+};
 export const routerArrays = [];
 export const resetRouter = () => undefined;
 export const useMultiTagsStoreHook = () => ({ handleTags: () => undefined });
@@ -13,6 +17,7 @@ export const storageLocal = () => ({
 });
 
 let token: any;
+let navigations: { path: string; sessionId: string | undefined }[] = [];
 let tokenWrites = 0;
 let headerWrites = 0;
 let epoch = 0;
@@ -30,6 +35,7 @@ export function resetFixture() {
     refreshRequestId: "request"
   };
   tokenWrites = 0;
+  navigations = [];
   headerWrites = 0;
   observed = token.sessionId;
   epoch = 0;
@@ -72,6 +78,7 @@ export function successResponse() {
 }
 export const fixtureState = () => ({
   token,
+  navigations: [...navigations],
   tokenWrites,
   headerWrites,
   listeners: listeners.size
@@ -112,9 +119,11 @@ export const setToken = (value: unknown) => {
 export const setAuthToken = () => {
   headerWrites++;
 };
-export const removeToken = async () => {
-  token = undefined;
-};
+export const removeToken = (onLockedClear?: () => void) =>
+  sessionLock(async () => {
+    token = undefined;
+    onLockedClear?.();
+  });
 export const endAuthSessionIfCurrent = async () => undefined;
 export const createAuthRequestID = () => "new-id";
 export const accessTokenExpiry = () => Date.now() + 3600000;

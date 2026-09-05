@@ -173,17 +173,15 @@ export const useUserStore = defineStore("pure-user", {
       const refreshToken = getToken()?.refreshToken;
       const version = logoutHandlers.version;
       const handler = logoutHandlers.get();
-      this.endSession();
-      const finalized = removeToken();
-      if (refreshToken) {
-        void finalized
-          .then(() =>
-            version === logoutHandlers.version
-              ? handler({ refreshToken })
-              : undefined
-          )
-          .catch(error => console.warn("服务端会话注销失败:", error));
-      }
+      // Navigation guards must observe cleared cookies/storage when entering login.
+      const finalized = removeToken(() => this.endSession());
+      return finalized
+        .then(() =>
+          refreshToken && version === logoutHandlers.version
+            ? handler({ refreshToken })
+            : undefined
+        )
+        .catch(error => console.warn("会话注销失败:", error));
     },
     /** 结束当前 UI 会话；凭据由持有认证锁的调用方清理。 */
     endSession() {

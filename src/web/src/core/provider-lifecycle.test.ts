@@ -3,7 +3,11 @@ import { test } from "node:test";
 import auth from "../addons/auth/index";
 import rbac from "../addons/rbac/index";
 import { getAsyncRoutes, setAsyncRoutesProvider } from "../api/routes";
-import { setLoginHandler, useUserStoreHook } from "../store/modules/user";
+import {
+  setLoginHandler,
+  setLogoutHandler,
+  useUserStoreHook
+} from "../store/modules/user";
 import {
   setLoginComponent,
   useLoginUIStoreHook
@@ -15,6 +19,7 @@ import {
   configureRoutes,
   fixtureState,
   resetFixture,
+  setToken,
   successResponse
 } from "../../tests/fixtures/provider-lifecycle";
 
@@ -37,6 +42,51 @@ test("unconfigured auth/refresh fail closed and absent route provider grants no 
     false
   );
   assert.deepEqual(await getAsyncRoutes(), { success: true, data: [] });
+});
+
+test("logout clears credentials before navigation while waiting for the shared lock", async () => {
+  resetFixture();
+  let entered: () => void;
+  let release: () => void;
+  const started = new Promise<void>(resolve => {
+    entered = resolve;
+  });
+  const waiting = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  configureLock(async operation => {
+    entered();
+    await waiting;
+    return operation();
+  });
+  const revoked: string[] = [];
+  const disposeLogout = setLogoutHandler(async ({ refreshToken }) => {
+    revoked.push(refreshToken);
+  });
+  const pending = useUserStoreHook().logOut();
+  await started;
+  assert.deepEqual(fixtureState().navigations, []);
+  assert.equal(fixtureState().token.sessionId, "session");
+  release();
+  await pending;
+  assert.deepEqual(fixtureState().navigations, [
+    { path: "/login", sessionId: undefined }
+  ]);
+  assert.equal(fixtureState().token, undefined);
+  assert.deepEqual(revoked, ["refresh"]);
+  disposeLogout();
+});
+
+test("logout handles local cleanup failure even without a refresh token", async context => {
+  resetFixture();
+  setToken({ sessionId: "session" });
+  const warnings = context.mock.method(console, "warn", () => {});
+  configureLock(async () => {
+    throw new Error("session lock failed");
+  });
+  await useUserStoreHook().logOut();
+  assert.equal(warnings.mock.calls.length, 1);
+  assert.deepEqual(fixtureState().navigations, []);
 });
 
 test("auth destroy restores prior handlers/UI and removes the storage listener", async context => {

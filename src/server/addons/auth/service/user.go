@@ -89,6 +89,8 @@ func (s *UserService) Register(username, password, nickName string, roleID uint)
 		NickName: nickName,
 		RoleID:   roleID,
 		Enable:   1,
+
+		AccountType: model.AccountTypeHuman,
 	}
 
 	if err := user.SetPassword(password); err != nil {
@@ -232,6 +234,8 @@ func (s *UserService) BootstrapAdminFromEnvironment() error {
 		NickName: "Administrator",
 		RoleID:   999,
 		Enable:   1,
+
+		AccountType: model.AccountTypeHuman,
 	}
 	if err := admin.SetPassword(password); err != nil {
 		return errors.New("failed to hash bootstrap administrator password")

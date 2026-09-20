@@ -5,6 +5,11 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	AccountTypeHuman = "human"
+	AccountTypeAgent = "agent"
+)
+
 // User 用户表
 type User struct {
 	ID        uint           `json:"id" gorm:"primarykey;comment:主键ID"`
@@ -20,6 +25,8 @@ type User struct {
 	Email     string         `json:"email" gorm:"column:email;comment:用户邮箱"`
 	Enable    int            `json:"enable" gorm:"column:enable;default:1;comment:用户是否被冻结 1正常 2冻结"`
 	RoleID    uint           `json:"roleId" gorm:"column:role_id;comment:用户角色ID"`
+
+	AccountType string `json:"accountType" gorm:"column:account_type;size:16;not null;default:human;comment:账户类型 human用户 agent智能体"`
 }
 
 // SetPassword 设置密码（bcrypt 哈希）

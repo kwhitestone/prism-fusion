@@ -44,6 +44,40 @@ func TestBootstrapAdminDoesNothingWithoutExplicitCredentials(t *testing.T) {
 	}
 }
 
+func TestUserAccountTypeDefaultsToHuman(t *testing.T) {
+	setupUserTestDB(t)
+	user := &model.User{Username: "default-human", Enable: 1}
+	if err := global.PRISM_DB.Create(user).Error; err != nil {
+		t.Fatal(err)
+	}
+	if user.AccountType != model.AccountTypeHuman {
+		t.Fatalf("account type = %q, want %q", user.AccountType, model.AccountTypeHuman)
+	}
+}
+
+func TestUserAccountTypeMigrationDefaultsExistingRowsToHuman(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec("CREATE TABLE users (id integer primary key autoincrement, username text)").Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec("INSERT INTO users (username) VALUES (?)", "existing-human").Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.AutoMigrate(&model.User{}); err != nil {
+		t.Fatal(err)
+	}
+	var user model.User
+	if err := db.Where("username = ?", "existing-human").First(&user).Error; err != nil {
+		t.Fatal(err)
+	}
+	if user.AccountType != model.AccountTypeHuman {
+		t.Fatalf("migrated account type = %q, want %q", user.AccountType, model.AccountTypeHuman)
+	}
+}
+
 func TestBootstrapAdminRequiresStrongExplicitCredentials(t *testing.T) {
 	setupUserTestDB(t)
 	t.Setenv("AUTH_BOOTSTRAP_ADMIN_USERNAME", "first-admin")
@@ -58,6 +92,9 @@ func TestBootstrapAdminRequiresStrongExplicitCredentials(t *testing.T) {
 	}
 	if admin.RoleID != 999 || !admin.CheckPassword("strong-one-time-password") {
 		t.Fatal("bootstrap administrator was not created with the requested credentials")
+	}
+	if admin.AccountType != model.AccountTypeHuman {
+		t.Fatalf("bootstrap account type = %q", admin.AccountType)
 	}
 }
 

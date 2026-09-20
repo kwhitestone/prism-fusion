@@ -166,13 +166,18 @@ test("repository scan accepts a composition-only host and rejects a business fil
   const root = await mkdtemp(join(tmpdir(), "prism-architecture-guard-"));
   try {
     await mkdir(join(root, "app/src/server"), { recursive: true });
+    await mkdir(join(root, "app/src/server/addons/x/runtime"), { recursive: true });
     await mkdir(join(root, "app/src/admin/src/addons/orders"), { recursive: true });
     await writeFile(join(root, "app/src/server/main.go"), 'package main\nfunc main() {}\n');
+    await writeFile(join(root, "app/src/server/addons/x/runtime/plugin.mjs"), 'import "./sandbox-tools.mjs";\n');
+    await writeFile(join(root, "app/src/server/addons/x/runtime/sandbox-tools.mjs"), "export const tools = [];\n");
     await writeFile(join(root, "app/src/admin/src/main.ts"), 'import orders from "./addons/orders"; registerExternalPlugins([orders]);');
     await writeFile(join(root, "app/src/admin/src/addons/orders/index.ts"), 'export default { name:"orders", routes:[{path:"/orders",component:Orders}] };');
     const valid = await checkRepository(root, "example");
     assert.deepEqual(valid.errors, []);
-    assert.equal(valid.sourceCount, 3);
+    assert.equal(valid.sourceCount, 5);
+    await writeFile(join(root, "app/src/admin/src/main.ts"), 'import business from "../../business.ts";');
+    assert.ok(codes((await checkRepository(root, "example")).errors).includes("source-root-import"));
     await writeFile(join(root, "app/src/server/orders.go"), 'package main\ntype Order struct { ID uint `gorm:"primaryKey"` }\n');
     const invalid = await checkRepository(root, "example");
     assert.ok(codes(invalid.errors).includes("core-inventory"));

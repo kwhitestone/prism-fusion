@@ -225,7 +225,7 @@ export async function checkRepository(root, profile = "framework", policyFile) {
   });
   if (extraction.status !== 0) throw new Error(`Go architecture analysis failed: ${extraction.stderr || extraction.error}`);
   for (const features of JSON.parse(extraction.stdout)) errors.push(...inspectGoFeatures(features, policy));
-  for (const { file, source } of sources.filter(item => !item.file.endsWith(".go"))) errors.push(...inspectTypeScript(file, source, policy, ts));
+  for (const { file, source } of sources.filter(item => !item.file.endsWith(".go") && policy.frontendRoot && item.file.startsWith(`${policy.frontendRoot}/`))) errors.push(...inspectTypeScript(file, source, policy, ts));
   return { errors, sourceCount: runtimeFiles.length };
 }
 

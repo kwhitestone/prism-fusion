@@ -135,9 +135,16 @@ func (s *JwtService) ParseToken(tokenString string) (*Claims, error) {
 	cfg := global.PRISM_CONFIG.JWT
 	signingKey := []byte(cfg.SigningKey)
 
+	// An empty Issuer intentionally skips the check: prism-fusion is a generic
+	// framework and the tightening happens in each deployment's config.yaml.
+	opts := []jwt.ParserOption{jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()})}
+	if expected := strings.TrimSpace(cfg.Issuer); expected != "" {
+		opts = append(opts, jwt.WithIssuer(expected))
+	}
+
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(t *jwt.Token) (interface{}, error) {
 		return signingKey, nil
-	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+	}, opts...)
 	if err != nil {
 		return nil, err
 	}

@@ -97,6 +97,83 @@ func TestAccessParserRejectsUnexpectedSigningAlgorithm(t *testing.T) {
 	}
 }
 
+// UNI PR-1: the parse side must reject tokens minted by a different issuer.
+// An empty configured issuer stays unchecked so the framework's own fixtures
+// and any deployment that does not set `issuer` keep working.
+func TestAccessParserEnforcesConfiguredIssuer(t *testing.T) {
+	previous := global.PRISM_CONFIG
+	t.Cleanup(func() { global.PRISM_CONFIG = previous })
+
+	const signingKey = "test-signing-key-with-sufficient-entropy"
+
+	// mint signs a token with the given issuer, independent of the parse-side config.
+	mint := func(t *testing.T, issuer string) string {
+		t.Helper()
+		claims := Claims{
+			TokenType: AccessTokenType,
+			Principal: PrincipalTypeUser,
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+				Issuer:    issuer,
+			},
+		}
+		token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(signingKey))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return token
+	}
+
+	for _, tc := range []struct {
+		name       string
+		configured string
+		tokenIss   string
+		wantErr    bool
+	}{
+		{name: "matching issuer passes", configured: "nucleagent-auth", tokenIss: "nucleagent-auth"},
+		{name: "wrong issuer rejected", configured: "nucleagent-auth", tokenIss: "nucleagent-core", wantErr: true},
+		{name: "missing issuer rejected", configured: "nucleagent-auth", tokenIss: "", wantErr: true},
+		{name: "unset config accepts any issuer", configured: "", tokenIss: "somebody-else"},
+		{name: "unset config accepts missing issuer", configured: "", tokenIss: ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			global.PRISM_CONFIG.JWT = config.JWT{SigningKey: signingKey, Issuer: tc.configured}
+			_, err := (&JwtService{}).ParseAccessToken(mint(t, tc.tokenIss))
+			if tc.wantErr && err == nil {
+				t.Fatalf("issuer %q must be rejected when %q is configured", tc.tokenIss, tc.configured)
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("issuer %q must be accepted when %q is configured: %v", tc.tokenIss, tc.configured, err)
+			}
+		})
+	}
+}
+
+// A token signed by a granule configured for one issuer must not parse at a
+// granule expecting another — the doc's "issuer A signs / B parses" acceptance.
+func TestGeneratedTokenRejectedByDifferentlyConfiguredIssuer(t *testing.T) {
+	previous := global.PRISM_CONFIG
+	t.Cleanup(func() { global.PRISM_CONFIG = previous })
+
+	global.PRISM_CONFIG.JWT = config.JWT{
+		SigningKey:  "test-signing-key-with-sufficient-entropy",
+		ExpiresTime: "15m",
+		Issuer:      "issuer-a",
+	}
+	token, err := (&JwtService{}).GenerateSessionToken(1, "alice", 1, "family-123")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := (&JwtService{}).ParseAccessToken(token); err != nil {
+		t.Fatalf("issuer-a token must parse under issuer-a: %v", err)
+	}
+
+	global.PRISM_CONFIG.JWT.Issuer = "issuer-b"
+	if _, err := (&JwtService{}).ParseAccessToken(token); err == nil {
+		t.Fatal("token signed by issuer-a must be rejected when issuer-b is expected")
+	}
+}
+
 func TestTokenConfigurationRejectsUnsafeOrInvalidDurations(t *testing.T) {
 	previous := global.PRISM_CONFIG
 	t.Cleanup(func() { global.PRISM_CONFIG = previous })

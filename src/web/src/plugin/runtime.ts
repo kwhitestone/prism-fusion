@@ -1,7 +1,7 @@
 import { createRouterMatcher } from "vue-router";
 import type { App, Component } from "vue";
 import type { Router, RouteRecordRaw } from "vue-router";
-import { clonePlugin, cloneRoutes, PluginRegistry } from "./registry.js";
+import { clonePlugin, cloneRoutes, type PluginRegistry } from "./registry.js";
 import type { PluginModule, PluginStatus } from "./types";
 
 export type PluginApp = Pick<App, "component" | "_context">;
@@ -166,14 +166,12 @@ export function preflightPluginContributions(
       .getRoutes()
       .flatMap(route => (route.name === undefined ? [] : [route.name]))
   );
-  const claims: RouteClaim[] = router
-    .getRoutes()
-    .map(route => ({
-      owner: "$core",
-      path: route.path,
-      node: route,
-      ancestors: []
-    }));
+  const claims: RouteClaim[] = router.getRoutes().map(route => ({
+    owner: "$core",
+    path: route.path,
+    node: route,
+    ancestors: []
+  }));
   const components = new Set<string>();
   for (const plugin of plugins) {
     const added = collectClaims(plugin, names);
@@ -262,7 +260,11 @@ export class PluginRuntime {
     let current: string | undefined;
     try {
       this.assertGeneration(generation);
-      plugins = preflightPluginContributions(this.registry.freeze(), app, router);
+      plugins = preflightPluginContributions(
+        this.registry.freeze(),
+        app,
+        router
+      );
       this.assertGeneration(generation);
       this.statuses = plugins.map(plugin => ({
         name: plugin.name,

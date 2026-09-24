@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createApp } from "vue";
-import { createMemoryHistory, createRouter, type RouteRecordRaw } from "vue-router";
+import {
+  createMemoryHistory,
+  createRouter,
+  type RouteRecordRaw
+} from "vue-router";
 import { createPluginHost } from "./headless.js";
 import type { PluginModule } from "./types";
 
@@ -11,15 +15,27 @@ function fixture(homePath = "/orders") {
     { path: "/", redirect: "/orders", name: "root" },
     { path: "/:pathMatch(.*)*", redirect: "/orders", name: "not-found" }
   ];
-  const router = createRouter({ history: createMemoryHistory(), routes: coreRoutes });
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: coreRoutes
+  });
   const host = createPluginHost({ app, router, coreRoutes, homePath });
   return { app, router, host };
 }
 
-function addon(name = "orders", extra: Partial<PluginModule> = {}): PluginModule {
+function addon(
+  name = "orders",
+  extra: Partial<PluginModule> = {}
+): PluginModule {
   return {
     name,
-    manifest: { apiVersion: "prism-fusion/v2", kind: "frontend-addon", id: name, version: "1.0.0", routeScopes: [`/${name}`] },
+    manifest: {
+      apiVersion: "prism-fusion/v2",
+      kind: "frontend-addon",
+      id: name,
+      version: "1.0.0",
+      routeScopes: [`/${name}`]
+    },
     routes: [{ path: `/${name}`, name, component: { render: () => null } }],
     ...extra
   };
@@ -50,11 +66,23 @@ test("headless host awaits hooks and commits route snapshots once", async () => 
   const { host, router } = fixture();
   let release!: () => void;
   let installs = 0;
-  host.register([addon("orders", { setup: () => { installs++; return new Promise<void>(resolve => { release = resolve; }); } })]);
+  host.register([
+    addon("orders", {
+      setup: () => {
+        installs++;
+        return new Promise<void>(resolve => {
+          release = resolve;
+        });
+      }
+    })
+  ]);
   const first = host.install();
   const second = host.install();
   await new Promise(resolve => setTimeout(resolve, 0));
-  assert.equal(host.getRoutes().some(route => route.path === "/orders"), false);
+  assert.equal(
+    host.getRoutes().some(route => route.path === "/orders"),
+    false
+  );
   release();
   await Promise.all([first, second]);
   await host.install();
@@ -62,7 +90,10 @@ test("headless host awaits hooks and commits route snapshots once", async () => 
   router.clearRoutes();
   host.restoreRoutes();
   assert.equal(router.hasRoute("orders"), true);
-  assert.equal(router.getRoutes().filter(route => route.path === "/orders").length, 1);
+  assert.equal(
+    router.getRoutes().filter(route => route.path === "/orders").length,
+    1
+  );
   const snapshot = host.getRoutes();
   snapshot[0].path = "/tampered";
   assert.equal(host.getRoutes()[0].path, "/");
@@ -72,7 +103,16 @@ test("headless host awaits hooks and commits route snapshots once", async () => 
 test("headless host rolls back failed hooks and missing landing page", async () => {
   const { host, router } = fixture();
   let cleaned = 0;
-  host.register([addon("orders", { setup: () => { throw new Error("boom"); }, destroy: () => { cleaned++; } })]);
+  host.register([
+    addon("orders", {
+      setup: () => {
+        throw new Error("boom");
+      },
+      destroy: () => {
+        cleaned++;
+      }
+    })
+  ]);
   await assert.rejects(host.install(), /boom/);
   assert.equal(cleaned, 1);
   assert.equal(router.hasRoute("orders"), false);
@@ -88,13 +128,23 @@ test("headless host still rejects core and plugin collisions", async () => {
   router.addRoute({ path: "/orders", name: "existing", component: {} });
   host.register([addon()]);
   await assert.rejects(host.install(), /collision/);
-  assert.equal(router.hasRoute("existing"), true, "failed preflight must not delete prior host routes");
+  assert.equal(
+    router.hasRoute("existing"),
+    true,
+    "failed preflight must not delete prior host routes"
+  );
 });
 
 test("headless immediate cancellation cannot mount a pending plugin", async () => {
   const { host, router } = fixture();
   let installed = 0;
-  host.register([addon("orders", { install: () => { installed++; } })]);
+  host.register([
+    addon("orders", {
+      install: () => {
+        installed++;
+      }
+    })
+  ]);
   const pending = host.install();
   const stopping = host.uninstall();
   await assert.rejects(pending, /cancelled/);
@@ -107,7 +157,17 @@ test("headless uninstall cancels an in-flight installation", async () => {
   const { host, router } = fixture();
   let release!: () => void;
   let cleaned = 0;
-  host.register([addon("orders", { setup: () => new Promise<void>(resolve => { release = resolve; }), destroy: () => { cleaned++; } })]);
+  host.register([
+    addon("orders", {
+      setup: () =>
+        new Promise<void>(resolve => {
+          release = resolve;
+        }),
+      destroy: () => {
+        cleaned++;
+      }
+    })
+  ]);
   const pending = host.install();
   await new Promise(resolve => setTimeout(resolve, 0));
   const stopping = host.uninstall();
@@ -116,7 +176,10 @@ test("headless uninstall cancels an in-flight installation", async () => {
   await stopping;
   assert.equal(cleaned, 1);
   assert.equal(router.hasRoute("orders"), false);
-  assert.equal(host.getRoutes().some(route => route.path === "/orders"), false);
+  assert.equal(
+    host.getRoutes().some(route => route.path === "/orders"),
+    false
+  );
 });
 
 test("headless hosts have independent registries and no shared router state", async () => {

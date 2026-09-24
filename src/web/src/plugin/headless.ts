@@ -5,7 +5,13 @@ import { PluginRuntime, type PluginRouter } from "./runtime.js";
 import { HostRoutes } from "./host-routes.js";
 import type { PluginModule, PluginStatus } from "./types";
 
-export type { PluginModule, PluginManifest, PluginDependency, PluginPermission, PluginStatus } from "./types";
+export type {
+  PluginModule,
+  PluginManifest,
+  PluginDependency,
+  PluginPermission,
+  PluginStatus
+} from "./types";
 export { PluginRegistry } from "./registry.js";
 export { PluginRuntime } from "./runtime.js";
 export { mergeNavigationMetadata } from "./navigation.js";
@@ -28,7 +34,9 @@ export interface HeadlessPluginHost {
 }
 
 /** Per-application adapter over the same V2 runtime used by the framework UI. */
-export function createPluginHost(options: HeadlessHostOptions): HeadlessPluginHost {
+export function createPluginHost(
+  options: HeadlessHostOptions
+): HeadlessPluginHost {
   const { app, router } = options;
   const coreRoutes = cloneRoutes(options.coreRoutes ?? router.options.routes);
   const baseline = new HostRoutes(coreRoutes);
@@ -37,16 +45,26 @@ export function createPluginHost(options: HeadlessHostOptions): HeadlessPluginHo
   const runtime = new PluginRuntime(registry);
   // A host fallback is deliberately the lowest-ranked match, not a business
   // namespace claim. Only this exact, explicitly host-declared pattern is exempt.
-  const fallbackNames = new Set(coreRoutes
-    .filter(route => route.path === "/:pathMatch(.*)*" && route.name !== undefined)
-    .map(route => route.name));
+  const fallbackNames = new Set(
+    coreRoutes
+      .filter(
+        route => route.path === "/:pathMatch(.*)*" && route.name !== undefined
+      )
+      .map(route => route.name)
+  );
   const runtimeRouter: PluginRouter = {
     addRoute: router.addRoute.bind(router),
     removeRoute: router.removeRoute.bind(router),
     hasRoute: router.hasRoute.bind(router),
-    getRoutes: () => router.getRoutes().filter(route => !(
-      route.path === "/:pathMatch(.*)*" && fallbackNames.has(route.name)
-    ))
+    getRoutes: () =>
+      router
+        .getRoutes()
+        .filter(
+          route =>
+            !(
+              route.path === "/:pathMatch(.*)*" && fallbackNames.has(route.name)
+            )
+        )
   };
   let pending: Promise<PluginStatus[]> | undefined;
   let stopping: Promise<void> | undefined;
@@ -56,7 +74,8 @@ export function createPluginHost(options: HeadlessHostOptions): HeadlessPluginHo
   const restoreRoutes = () => baseline.restore(router);
 
   const install = (): Promise<PluginStatus[]> => {
-    if (stopping) return Promise.reject(new Error("Plugin host is uninstalling"));
+    if (stopping)
+      return Promise.reject(new Error("Plugin host is uninstalling"));
     if (installed) return Promise.resolve(runtime.getStatuses());
     if (pending) return pending;
     started = true;
@@ -85,13 +104,17 @@ export function createPluginHost(options: HeadlessHostOptions): HeadlessPluginHo
   const uninstall = (): Promise<void> => {
     if (stopping) return stopping;
     const installation = pending;
-    stopping = Promise.resolve().then(async () => {
-      await runtime.uninstall();
-      if (installation) await installation.catch(() => undefined);
-      baseline.clear();
-      restoreRoutes();
-      installed = false;
-    }).finally(() => { stopping = undefined; });
+    stopping = Promise.resolve()
+      .then(async () => {
+        await runtime.uninstall();
+        if (installation) await installation.catch(() => undefined);
+        baseline.clear();
+        restoreRoutes();
+        installed = false;
+      })
+      .finally(() => {
+        stopping = undefined;
+      });
     return stopping;
   };
 
@@ -100,7 +123,8 @@ export function createPluginHost(options: HeadlessHostOptions): HeadlessPluginHo
       if (started) throw new Error("Plugin host registration is frozen");
       const candidates = plugins.map(clonePlugin);
       const trial = new PluginRegistry();
-      for (const plugin of [...registry.getPlugins(), ...candidates]) trial.register(plugin);
+      for (const plugin of [...registry.getPlugins(), ...candidates])
+        trial.register(plugin);
       for (const plugin of candidates) registry.register(plugin);
     },
     install,

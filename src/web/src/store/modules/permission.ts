@@ -33,13 +33,11 @@ export const usePermissionStore = defineStore("pure-permission", {
     },
     /** 组装整体路由生成的菜单 */
     handleWholeMenus(routes: unknown) {
-      const menus = ascending(mergeNavigationMetadata(this.constantMenus as RouteRecordRaw[], routes));
-      this.wholeMenus = filterNoPermissionTree(
-        filterTree(menus)
+      const menus = ascending(
+        mergeNavigationMetadata(this.constantMenus as RouteRecordRaw[], routes)
       );
-      this.flatteningRoutes = formatFlatteningRoutes(
-        menus
-      );
+      this.wholeMenus = filterNoPermissionTree(filterTree(menus));
+      this.flatteningRoutes = formatFlatteningRoutes(menus);
     },
     /** 监听缓存页面是否存在于标签页，不存在则删除 */
     clearCache() {

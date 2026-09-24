@@ -10,10 +10,8 @@ export interface RippleOptions {
   circle?: boolean;
 }
 
-export interface RippleDirectiveBinding extends Omit<
-  DirectiveBinding,
-  "modifiers" | "value"
-> {
+export interface RippleDirectiveBinding
+  extends Omit<DirectiveBinding, "modifiers" | "value"> {
   value?: boolean | { class: string };
   modifiers: {
     center?: boolean;

@@ -171,16 +171,26 @@ async function initRouter() {
   const caching = getConfig()?.CachingAsyncRoutes;
   const key = "plugin-navigation-v2";
   const sessionId = getToken()?.sessionId;
-  const cached = caching ? storageLocal().getItem<{ sessionId?: string; routes?: unknown }>(key) : undefined;
+  const cached = caching
+    ? storageLocal().getItem<{ sessionId?: string; routes?: unknown }>(key)
+    : undefined;
   let routes: unknown;
-  if (sessionId && cached?.sessionId === sessionId && Array.isArray(cached.routes)) {
+  if (
+    sessionId &&
+    cached?.sessionId === sessionId &&
+    Array.isArray(cached.routes)
+  ) {
     routes = cached.routes;
   } else {
     const result = await getAsyncRoutes();
-    if (result.success !== true || !Array.isArray(result.data)) throw new Error("Navigation metadata request failed");
+    if (result.success !== true || !Array.isArray(result.data))
+      throw new Error("Navigation metadata request failed");
     routes = result.data;
   }
-  if (getToken()?.sessionId !== sessionId) throw new Error("Navigation initialization cancelled because the auth session changed");
+  if (getToken()?.sessionId !== sessionId)
+    throw new Error(
+      "Navigation initialization cancelled because the auth session changed"
+    );
   handleAsyncRoutes(routes);
   if (caching && sessionId) storageLocal().setItem(key, { sessionId, routes });
   return router;

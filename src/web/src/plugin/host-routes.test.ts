@@ -6,16 +6,37 @@ import { HostRoutes } from "./host-routes.js";
 
 const View = { render: () => null };
 const core = (): RouteRecordRaw[] => [
-  { path: "/", name: "Home", redirect: "/welcome", component: View,
-    children: [{ path: "/welcome", name: "Welcome", component: View }], meta: { title: "Home", rank: 0 } },
-  { path: "/login", name: "Login", component: View, meta: { title: "Login", showLink: false } }
+  {
+    path: "/",
+    name: "Home",
+    redirect: "/welcome",
+    component: View,
+    children: [{ path: "/welcome", name: "Welcome", component: View }],
+    meta: { title: "Home", rank: 0 }
+  },
+  {
+    path: "/login",
+    name: "Login",
+    component: View,
+    meta: { title: "Login", showLink: false }
+  }
 ];
-const plugins = (): RouteRecordRaw[] => [{ path: "/dashboard", name: "Dashboard", component: View,
-  meta: { title: "Dashboard" }, children: [{ path: "", name: "DashboardIndex", component: View }] }];
+const plugins = (): RouteRecordRaw[] => [
+  {
+    path: "/dashboard",
+    name: "Dashboard",
+    component: View,
+    meta: { title: "Dashboard" },
+    children: [{ path: "", name: "DashboardIndex", component: View }]
+  }
+];
 
 test("a committed plugin survives logout reset without duplicating routes or menus", () => {
   const state = new HostRoutes(core());
-  const router = createRouter({ history: createMemoryHistory(), routes: core() });
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: core()
+  });
   state.configure({ homePath: "/dashboard" });
   state.commit(plugins());
   state.restore(router);
@@ -25,15 +46,30 @@ test("a committed plugin survives logout reset without duplicating routes or men
   assert.equal(router.hasRoute("Dynamic"), false);
   assert.equal(router.resolve("/dashboard").name, "DashboardIndex");
   assert.equal(state.getRoutes()[0].redirect, "/dashboard");
-  assert.equal(state.getMenus().filter(route => route.path === "/dashboard").length, 1);
+  assert.equal(
+    state.getMenus().filter(route => route.path === "/dashboard").length,
+    1
+  );
   assert.throws(() => state.configure({ homePath: "/welcome" }), /frozen/);
 });
 
 test("invalid home targets fail before committing routes", () => {
-  for (const homePath of ["/", "https://example.com", "/missing", "/dashboard/../welcome", "/dashboard?x=1"]) {
+  for (const homePath of [
+    "/",
+    "https://example.com",
+    "/missing",
+    "/dashboard/../welcome",
+    "/dashboard?x=1"
+  ]) {
     const state = new HostRoutes(core());
-    assert.throws(() => { state.configure({ homePath }); state.commit(plugins()); });
-    assert.equal(state.getRoutes().some(route => route.path === "/dashboard"), false);
+    assert.throws(() => {
+      state.configure({ homePath });
+      state.commit(plugins());
+    });
+    assert.equal(
+      state.getRoutes().some(route => route.path === "/dashboard"),
+      false
+    );
   }
 });
 

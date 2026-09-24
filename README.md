@@ -345,14 +345,28 @@ rbac:
 jwt:
   signing-key: '${JWT_SECRET}' # 至少 32 字节，必须通过环境变量注入
   expires-time: 15m
-  refresh-expires-time: 720h
-  refresh-family-expires-time: 2160h
+  refresh-expires-time: 87600h
+  refresh-family-expires-time: 87600h
 
 sqlite:
   path: ./prism_fusion.db
 ```
 
 完整配置见 [config.example.yaml](src/server/config.example.yaml)。
+
+### Aligned Refresh Windows
+
+Set both refresh durations to `87600h` (3650 days, approximately ten years)
+for the finite long-lived mode. This removes the short idle/family window
+without changing token rotation, reuse detection, revocation, or manual logout.
+It is not mathematically unlimited: the stored family deadline still applies.
+Rotation preserves `family_expires_at`; configuration changes do not rewrite
+existing sessions. A family issued with the old `720h` cap still expires at
+that deadline and requires one new login to receive the aligned window.
+
+Shorter positive durations remain supported. Omitted values retain the legacy
+defaults (refresh `720h`, family `2160h`); `0` remains invalid, not an unlimited
+sentinel. No database migration or session backfill is required.
 
 ## 技术栈
 

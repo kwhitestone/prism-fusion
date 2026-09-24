@@ -2,6 +2,7 @@
   "Version": "6.2.0",
   "Title": "Prism Fusion",
   "AuthProvider": "builtin",
+  "register-enabled": false,
   "RBACProvider": "builtin",
   "FixedHeader": true,
   "HiddenSideBar": false,

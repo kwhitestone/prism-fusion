@@ -85,6 +85,8 @@ declare global {
    * @see {@link https://pure-admin.cn/pages/config/#platform-config-json}
    */
   interface PlatformConfigs {
+    /** Show builtin registration UI; disabled unless explicitly true. */
+    "register-enabled"?: boolean;
     Version?: string;
     Title?: string;
     FixedHeader?: boolean;

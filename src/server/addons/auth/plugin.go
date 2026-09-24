@@ -78,6 +78,7 @@ func (p *AuthPlugin) RegisterRoutes(api huma.API) {
 		panic(err)
 	}
 	if !shouldServeRoutes() {
+		authRouter.RegisterSessionRoutes(api)
 		return
 	}
 

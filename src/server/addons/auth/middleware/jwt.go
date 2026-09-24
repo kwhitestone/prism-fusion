@@ -44,6 +44,15 @@ func JwtAuthMiddleware() gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		path := c.Request.URL.Path
+		if configured := global.PRISM_CONFIG.Auth.ServeRoutes; configured != nil && !*configured {
+			// Also cover credential routes supplied by independently registered addons.
+			for _, endpoint := range []string{"login", "register", "logout", "portal/start", "portal/login"} {
+				if publicPathMatches(path, "/api/v1/addons/auth/"+endpoint) {
+					c.AbortWithStatus(http.StatusNotFound)
+					return
+				}
+			}
+		}
 		if c.Request.Method != http.MethodOptions && !enforceAuthRateLimit(c, path) {
 			return
 		}

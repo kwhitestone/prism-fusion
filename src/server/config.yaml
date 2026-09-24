@@ -17,7 +17,7 @@ jwt:
 # 认证配置
 auth:
   provider: 'builtin'  # builtin(内置JWT) 或业务插件提供的 provider（如 oauth）
-  serve-routes: true   # 仅认证服务应开启；资源服务设为 false，仅保留 JWT middleware
+  serve-routes: true   # 仅认证服务应开启；资源服务设为 false，保留 JWT middleware 和 refresh-token
 
 # 权限控制配置
 rbac:

@@ -224,72 +224,7 @@ func RegisterRoutes(api huma.API) {
 		return resp, nil
 	})
 
-	// 刷新 Token
-	huma.Register(api, huma.Operation{
-		OperationID: "authRefreshToken",
-		Method:      http.MethodPost,
-		Path:        "/api/v1/addons/auth/refresh-token",
-		Summary:     "刷新Token",
-		Description: "使用 refresh token 获取新的 access token",
-		Tags:        []string{"Auth"},
-	}, func(ctx context.Context, input *RefreshTokenInput) (*LoginOutput, error) {
-		credential := refreshCredential(
-			input.CookieOnly,
-			input.Body.RefreshToken,
-			input.RefreshCookie,
-		)
-		if !validRefreshRequestID(input.CookieOnly, input.RequestID) {
-			return nil, huma.NewError(http.StatusBadRequest, "刷新请求标识无效")
-		}
-		user, familyID, newRefreshToken, refreshExpiresAt, err := refreshSessionService.RotateForActiveUser(
-			credential,
-			input.RequestID,
-		)
-		if errors.Is(err, service.ErrInvalidRefreshToken) ||
-			errors.Is(err, service.ErrExpiredRefreshToken) ||
-			errors.Is(err, service.ErrRefreshTokenReused) ||
-			errors.Is(err, service.ErrRefreshUserUnavailable) {
-			return nil, huma.NewError(http.StatusUnauthorized, "刷新令牌无效或已过期")
-		} else if err != nil {
-			return nil, huma.NewError(http.StatusInternalServerError, "刷新会话暂时不可用")
-		}
-		access, err := service.ResolveAuthorization(ctx, user.ID, user.RoleID)
-		if err != nil {
-			_ = refreshSessionService.Revoke(newRefreshToken)
-			return nil, huma.NewError(http.StatusServiceUnavailable, "权限服务暂时不可用")
-		}
-		newToken, err := jwtService.GenerateSessionToken(
-			user.ID,
-			user.Username,
-			user.RoleID,
-			familyID,
-		)
-		if err != nil {
-			return nil, huma.NewError(http.StatusInternalServerError, "Token 生成失败")
-		}
-		resp := &LoginOutput{}
-		resp.SetCookie = newRefreshCookie(newRefreshToken, refreshExpiresAt)
-
-		resp.Body.Code = 0
-		resp.Body.Message = "刷新成功"
-		resp.Body.Data = &LoginData{
-			AccessToken:      newToken,
-			RefreshToken:     exposedRefreshToken(input.CookieOnly, newRefreshToken),
-			ExpiresIn:        jwtService.AccessExpiresIn(),
-			RefreshExpiresIn: refreshSessionService.RefreshExpiresIn(),
-			User: &LoginUserInfo{
-				ID:          user.ID,
-				Username:    user.Username,
-				NickName:    user.NickName,
-				HeaderImg:   user.HeaderImg,
-				RoleID:      user.RoleID,
-				Roles:       access.Roles,
-				Permissions: access.Permissions,
-				Menus:       access.Menus,
-			},
-		}
-		return resp, nil
-	})
+	RegisterSessionRoutes(api)
 
 	// 注销并吊销整个 refresh token family。无论 token 是否存在都返回成功，
 	// 避免通过响应差异探测会话。
@@ -366,6 +301,76 @@ func RegisterRoutes(api huma.API) {
 			Roles:       access.Roles,
 			Permissions: access.Permissions,
 			Menus:       access.Menus,
+		}
+		return resp, nil
+	})
+}
+
+// RegisterSessionRoutes keeps existing sessions renewable without exposing login routes.
+func RegisterSessionRoutes(api huma.API) {
+	// 刷新 Token
+	huma.Register(api, huma.Operation{
+		OperationID: "authRefreshToken",
+		Method:      http.MethodPost,
+		Path:        "/api/v1/addons/auth/refresh-token",
+		Summary:     "刷新Token",
+		Description: "使用 refresh token 获取新的 access token",
+		Tags:        []string{"Auth"},
+	}, func(ctx context.Context, input *RefreshTokenInput) (*LoginOutput, error) {
+		credential := refreshCredential(
+			input.CookieOnly,
+			input.Body.RefreshToken,
+			input.RefreshCookie,
+		)
+		if !validRefreshRequestID(input.CookieOnly, input.RequestID) {
+			return nil, huma.NewError(http.StatusBadRequest, "刷新请求标识无效")
+		}
+		user, familyID, newRefreshToken, refreshExpiresAt, err := refreshSessionService.RotateForActiveUser(
+			credential,
+			input.RequestID,
+		)
+		if errors.Is(err, service.ErrInvalidRefreshToken) ||
+			errors.Is(err, service.ErrExpiredRefreshToken) ||
+			errors.Is(err, service.ErrRefreshTokenReused) ||
+			errors.Is(err, service.ErrRefreshUserUnavailable) {
+			return nil, huma.NewError(http.StatusUnauthorized, "刷新令牌无效或已过期")
+		} else if err != nil {
+			return nil, huma.NewError(http.StatusInternalServerError, "刷新会话暂时不可用")
+		}
+		access, err := service.ResolveAuthorization(ctx, user.ID, user.RoleID)
+		if err != nil {
+			_ = refreshSessionService.Revoke(newRefreshToken)
+			return nil, huma.NewError(http.StatusServiceUnavailable, "权限服务暂时不可用")
+		}
+		newToken, err := jwtService.GenerateSessionToken(
+			user.ID,
+			user.Username,
+			user.RoleID,
+			familyID,
+		)
+		if err != nil {
+			return nil, huma.NewError(http.StatusInternalServerError, "Token 生成失败")
+		}
+		resp := &LoginOutput{}
+		resp.SetCookie = newRefreshCookie(newRefreshToken, refreshExpiresAt)
+
+		resp.Body.Code = 0
+		resp.Body.Message = "刷新成功"
+		resp.Body.Data = &LoginData{
+			AccessToken:      newToken,
+			RefreshToken:     exposedRefreshToken(input.CookieOnly, newRefreshToken),
+			ExpiresIn:        jwtService.AccessExpiresIn(),
+			RefreshExpiresIn: refreshSessionService.RefreshExpiresIn(),
+			User: &LoginUserInfo{
+				ID:          user.ID,
+				Username:    user.Username,
+				NickName:    user.NickName,
+				HeaderImg:   user.HeaderImg,
+				RoleID:      user.RoleID,
+				Roles:       access.Roles,
+				Permissions: access.Permissions,
+				Menus:       access.Menus,
+			},
 		}
 		return resp, nil
 	})

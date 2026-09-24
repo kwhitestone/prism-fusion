@@ -27,6 +27,19 @@ type authTestEnvelope struct {
 }
 
 func TestAuthAPIEndToEnd(t *testing.T) {
+	for _, window := range []struct {
+		name, refresh, family string
+	}{
+		{"finite", "24h", "48h"},
+		{"aligned", "87600h", "87600h"},
+	} {
+		t.Run(window.name, func(t *testing.T) {
+			testAuthAPIEndToEnd(t, window.refresh, window.family)
+		})
+	}
+}
+
+func testAuthAPIEndToEnd(t *testing.T, refreshTTL, familyTTL string) {
 	gin.SetMode(gin.TestMode)
 	db, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "auth-router.db")), &gorm.Config{TranslateError: true})
 	if err != nil {
@@ -41,8 +54,8 @@ func TestAuthAPIEndToEnd(t *testing.T) {
 	global.PRISM_CONFIG.JWT = config.JWT{
 		SigningKey:               "test-auth-router-signing-key-with-entropy",
 		ExpiresTime:              "15m",
-		RefreshExpiresTime:       "24h",
-		RefreshFamilyExpiresTime: "48h",
+		RefreshExpiresTime:       refreshTTL,
+		RefreshFamilyExpiresTime: familyTTL,
 		RefreshRotationGrace:     "60s",
 		Issuer:                   "auth-router-test",
 	}
@@ -156,5 +169,11 @@ func TestAuthAPIEndToEnd(t *testing.T) {
 	afterLogout := request(http.MethodGet, "/api/v1/addons/auth/user-info", nil, refreshEnvelope.Data.AccessToken)
 	if afterLogout.Code != http.StatusUnauthorized {
 		t.Fatalf("revoked session status=%d body=%s", afterLogout.Code, afterLogout.Body.String())
+	}
+	afterLogoutRefresh := request(http.MethodPost, "/api/v1/addons/auth/refresh-token", map[string]string{
+		"refreshToken": refreshEnvelope.Data.RefreshToken,
+	}, "")
+	if afterLogoutRefresh.Code != http.StatusUnauthorized {
+		t.Fatalf("revoked refresh status=%d", afterLogoutRefresh.Code)
 	}
 }

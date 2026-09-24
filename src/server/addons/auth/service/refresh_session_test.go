@@ -228,3 +228,83 @@ func TestRefreshMetadataAndIdempotentUnknownRevocation(t *testing.T) {
 		t.Fatalf("unknown token revoke=%v", err)
 	}
 }
+
+func TestAlignedRefreshWindows(t *testing.T) {
+	setupRefreshTestDB(t)
+	global.PRISM_CONFIG.JWT.RefreshExpiresTime = "87600h"
+	global.PRISM_CONFIG.JWT.RefreshFamilyExpiresTime = "87600h"
+	if err := ValidateTokenConfiguration(); err != nil {
+		t.Fatal(err)
+	}
+	service := &RefreshSessionService{}
+	if err := global.PRISM_DB.Create(&model.User{ID: 15, Username: "aligned", Enable: 1}).Error; err != nil {
+		t.Fatal(err)
+	}
+	token, family, expiry, err := service.IssueWithFamily(15)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var original model.RefreshSession
+	if err := global.PRISM_DB.Where("family_id = ?", family).First(&original).Error; err != nil {
+		t.Fatal(err)
+	}
+	if !expiry.Equal(original.FamilyExpiresAt) ||
+		original.FamilyExpiresAt.Sub(original.CreatedAt) < 87599*time.Hour {
+		t.Fatalf("expected aligned ten-year expiry: %+v", original)
+	}
+	// Shift the issued row back 721 hours to exercise rotation after the old cap.
+	age := 721 * time.Hour
+	familyExpiry := original.FamilyExpiresAt.Add(-age)
+	if err := global.PRISM_DB.Model(&original).Updates(map[string]any{
+		"created_at": original.CreatedAt.Add(-age), "expires_at": expiry.Add(-age),
+		"family_expires_at": familyExpiry,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	_, rotatedFamily, rotated, rotatedExpiry, err := service.RotateForActiveUser(token, "aligned-original")
+	if err != nil || rotatedFamily != family || !rotatedExpiry.Equal(familyExpiry) {
+		t.Fatalf("rotation after old cap: family=%q expiry=%v err=%v", rotatedFamily, rotatedExpiry, err)
+	}
+	active, err := service.IsFamilyActive(15, family)
+	if err != nil || !active {
+		t.Fatalf("aligned family inactive: active=%v err=%v", active, err)
+	}
+	if _, _, _, err := service.Rotate(token, "aligned-reuse"); !errors.Is(err, ErrRefreshTokenReused) {
+		t.Fatalf("expected reuse detection, got %v", err)
+	}
+	active, err = service.IsFamilyActive(15, family)
+	if err != nil || active {
+		t.Fatalf("reused family still active: active=%v err=%v", active, err)
+	}
+	if _, _, _, err := service.Rotate(rotated, "aligned-next"); !errors.Is(err, ErrRefreshTokenReused) {
+		t.Fatalf("replacement survived family revocation: %v", err)
+	}
+}
+
+func TestAlignedConfigPreservesExistingFamilyExpiry(t *testing.T) {
+	setupRefreshTestDB(t)
+	service := &RefreshSessionService{}
+	token, family, _, err := service.IssueWithFamily(11)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var original model.RefreshSession
+	if err := global.PRISM_DB.Where("family_id = ?", family).First(&original).Error; err != nil {
+		t.Fatal(err)
+	}
+	global.PRISM_CONFIG.JWT.RefreshExpiresTime = "87600h"
+	global.PRISM_CONFIG.JWT.RefreshFamilyExpiresTime = "87600h"
+	_, rotated, expiry, err := service.Rotate(token, "existing-family")
+	if err != nil || !expiry.Equal(original.FamilyExpiresAt) {
+		t.Fatalf("existing family cap changed: expiry=%v err=%v", expiry, err)
+	}
+	// Stored family expiry remains authoritative even with a live token expiry.
+	if err := global.PRISM_DB.Model(&model.RefreshSession{}).
+		Where("token_hash = ?", hashRefreshToken(rotated)).
+		Update("family_expires_at", time.Now().Add(-time.Second)).Error; err != nil {
+		t.Fatal(err)
+	}
+	if _, _, _, err := service.Rotate(rotated, "existing-expired"); !errors.Is(err, ErrExpiredRefreshToken) {
+		t.Fatalf("old family cap no longer enforced: %v", err)
+	}
+}

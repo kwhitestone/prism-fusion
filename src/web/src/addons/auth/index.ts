@@ -1,6 +1,7 @@
 import type { PluginModule } from "@/plugin/types";
 import { triggerPluginRegistryReport } from "@/plugin/loader";
 import {
+  DEFAULT_AVATAR,
   setLoginHandler,
   setLogoutHandler,
   setRefreshHandler,
@@ -144,7 +145,7 @@ const authPlugin: PluginModule = {
 
           // 设置 token 数据到 localStorage
           const tokenData = {
-            avatar: user?.headerImg || "",
+            avatar: user?.headerImg || DEFAULT_AVATAR,
             username: user?.username || data.username,
             nickname: user?.nickName || data.username,
             roles,
@@ -254,7 +255,7 @@ const authPlugin: PluginModule = {
             return {
               success: true,
               data: {
-                avatar: res.data.data.headerImg || "",
+                avatar: res.data.data.headerImg || DEFAULT_AVATAR,
                 roles: res.data.data.roles || [],
                 permissions: res.data.data.permissions || [],
                 nickname: res.data.data.nickName || "",

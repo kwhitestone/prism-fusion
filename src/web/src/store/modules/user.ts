@@ -19,7 +19,8 @@ import {
 } from "@/core/auth-session";
 
 // 默认头像
-const DEFAULT_AVATAR = new URL("@/assets/avatar.svg", import.meta.url).href;
+export const DEFAULT_AVATAR = new URL("@/assets/avatar.svg", import.meta.url)
+  .href;
 
 // ========== 策略注入 ==========
 // 登录处理策略默认为关闭；认证插件或业务 provider 必须显式注入。
@@ -96,7 +97,7 @@ export function setLogoutHandler(handler: LogoutHandler): () => void {
 export const useUserStore = defineStore("pure-user", {
   state: (): userType => ({
     avatar:
-      storageLocal().getItem<DataInfo<number>>(userKey)?.avatar ??
+      storageLocal().getItem<DataInfo<number>>(userKey)?.avatar ||
       DEFAULT_AVATAR,
     username: storageLocal().getItem<DataInfo<number>>(userKey)?.username ?? "",
     nickname: storageLocal().getItem<DataInfo<number>>(userKey)?.nickname ?? "",

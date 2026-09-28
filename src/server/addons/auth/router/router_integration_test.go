@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -39,68 +40,17 @@ func TestAuthAPIEndToEnd(t *testing.T) {
 	}
 }
 
-func testAuthAPIEndToEnd(t *testing.T, refreshTTL, familyTTL string) {
-	gin.SetMode(gin.TestMode)
-	db, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "auth-router.db")), &gorm.Config{TranslateError: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.AutoMigrate(&model.User{}, &model.RefreshSession{}, &model.AuthRateWindow{}); err != nil {
-		t.Fatal(err)
-	}
-	previousDB, previousConfig, previousLog := global.PRISM_DB, global.PRISM_CONFIG, global.PRISM_LOG
-	global.PRISM_DB = db
-	global.PRISM_LOG = zap.NewNop()
-	global.PRISM_CONFIG.JWT = config.JWT{
-		SigningKey:               "test-auth-router-signing-key-with-entropy",
-		ExpiresTime:              "15m",
-		RefreshExpiresTime:       refreshTTL,
-		RefreshFamilyExpiresTime: familyTTL,
-		RefreshRotationGrace:     "60s",
-		Issuer:                   "auth-router-test",
-	}
-	global.PRISM_CONFIG.RBAC = config.RBAC{Provider: "disabled"}
-	t.Cleanup(func() {
-		global.PRISM_DB = previousDB
-		global.PRISM_CONFIG = previousConfig
-		global.PRISM_LOG = previousLog
-		sqlDB, sqlErr := db.DB()
-		if sqlErr == nil {
-			_ = sqlDB.Close()
-		}
-	})
+type authRequest func(method, path string, body any, accessToken string) *httptest.ResponseRecorder
 
+func testAuthAPIEndToEnd(t *testing.T, refreshTTL, familyTTL string) {
+	t.Setenv("AUTH_ALLOW_LOCAL_REGISTRATION", "true")
+	request, db := newAuthTestServer(t, refreshTTL, familyTTL)
 	user := model.User{UUID: "auth-user-1", Username: "auth-user", NickName: "Auth User", RoleID: 1, Enable: 1}
 	if err := user.SetPassword("correct-password"); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatal(err)
-	}
-
-	engine := gin.New()
-	engine.Use(authMiddleware.JwtAuthMiddleware())
-	api := humagin.New(engine, huma.DefaultConfig("Auth test", "1.0.0"))
-	RegisterRoutes(api)
-	request := func(method, path string, body any, accessToken string) *httptest.ResponseRecorder {
-		t.Helper()
-		var payload []byte
-		if body != nil {
-			payload, err = json.Marshal(body)
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-		req := httptest.NewRequest(method, path, bytes.NewReader(payload))
-		if body != nil {
-			req.Header.Set("Content-Type", "application/json")
-		}
-		if accessToken != "" {
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-		}
-		recorder := httptest.NewRecorder()
-		engine.ServeHTTP(recorder, req)
-		return recorder
 	}
 
 	registered := request(http.MethodPost, "/api/v1/addons/auth/register", map[string]string{
@@ -177,3 +127,126 @@ func testAuthAPIEndToEnd(t *testing.T, refreshTTL, familyTTL string) {
 		t.Fatalf("revoked refresh status=%d", afterLogoutRefresh.Code)
 	}
 }
+
+// newAuthTestServer builds the router under the current environment, so
+// callers set AUTH_ALLOW_LOCAL_REGISTRATION before calling it.
+func newAuthTestServer(t *testing.T, refreshTTL, familyTTL string) (authRequest, *gorm.DB) {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+
+	db, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "auth-router.db")), &gorm.Config{TranslateError: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.AutoMigrate(&model.User{}, &model.RefreshSession{}, &model.AuthRateWindow{}); err != nil {
+		t.Fatal(err)
+	}
+	previousDB, previousConfig, previousLog := global.PRISM_DB, global.PRISM_CONFIG, global.PRISM_LOG
+	global.PRISM_DB = db
+	global.PRISM_LOG = zap.NewNop()
+	global.PRISM_CONFIG.JWT = config.JWT{
+		SigningKey:               "test-auth-router-signing-key-with-entropy",
+		ExpiresTime:              "15m",
+		RefreshExpiresTime:       refreshTTL,
+		RefreshFamilyExpiresTime: familyTTL,
+		RefreshRotationGrace:     "60s",
+		Issuer:                   "auth-router-test",
+	}
+	global.PRISM_CONFIG.RBAC = config.RBAC{Provider: "disabled"}
+	t.Cleanup(func() {
+		global.PRISM_DB = previousDB
+		global.PRISM_CONFIG = previousConfig
+		global.PRISM_LOG = previousLog
+		sqlDB, sqlErr := db.DB()
+		if sqlErr == nil {
+			_ = sqlDB.Close()
+		}
+	})
+
+	engine := gin.New()
+	engine.Use(authMiddleware.JwtAuthMiddleware())
+	api := humagin.New(engine, huma.DefaultConfig("Auth test", "1.0.0"))
+	RegisterRoutes(api)
+	request := func(method, path string, body any, accessToken string) *httptest.ResponseRecorder {
+		t.Helper()
+		var payload []byte
+		if body != nil {
+			var err error
+			payload, err = json.Marshal(body)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		req := httptest.NewRequest(method, path, bytes.NewReader(payload))
+		if body != nil {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		if accessToken != "" {
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+		}
+		recorder := httptest.NewRecorder()
+		engine.ServeHTTP(recorder, req)
+		return recorder
+	}
+	return request, db
+}
+
+func TestLocalRegistrationFlag(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		value   *string
+		enabled bool
+	}{
+		{"absent", nil, false},
+		{"empty", ptr(""), false},
+		{"TRUE", ptr("TRUE"), false},
+		{"1", ptr("1"), false},
+		{"true", ptr("true"), true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.value == nil {
+				t.Setenv("AUTH_ALLOW_LOCAL_REGISTRATION", "")
+				os.Unsetenv("AUTH_ALLOW_LOCAL_REGISTRATION")
+			} else {
+				t.Setenv("AUTH_ALLOW_LOCAL_REGISTRATION", *tc.value)
+			}
+			request, db := newAuthTestServer(t, "24h", "48h")
+
+			// Logged out, no token: the login page's probe.
+			status := request(http.MethodGet, "/api/v1/addons/auth/registration-status", nil, "")
+			if status.Code != http.StatusOK {
+				t.Fatalf("status code=%d body=%s", status.Code, status.Body.String())
+			}
+			var envelope struct {
+				Code int `json:"code"`
+				Data struct {
+					Enabled *bool `json:"enabled"`
+				} `json:"data"`
+			}
+			if err := json.Unmarshal(status.Body.Bytes(), &envelope); err != nil {
+				t.Fatal(err)
+			}
+			if envelope.Code != 0 || envelope.Data.Enabled == nil || *envelope.Data.Enabled != tc.enabled {
+				t.Fatalf("status body=%s, want enabled=%v", status.Body.String(), tc.enabled)
+			}
+
+			valid := map[string]string{"username": "flag-user", "password": "flag-password", "nickName": ""}
+			registered := request(http.MethodPost, "/api/v1/addons/auth/register", valid, "")
+			var users int64
+			db.Model(&model.User{}).Where("username = ?", "flag-user").Count(&users)
+			if !tc.enabled {
+				// 404 regardless of body validity, and nothing is written.
+				invalid := request(http.MethodPost, "/api/v1/addons/auth/register", map[string]string{}, "")
+				if registered.Code != http.StatusNotFound || invalid.Code != http.StatusNotFound || users != 0 {
+					t.Fatalf("flag off: valid=%d invalid=%d users=%d", registered.Code, invalid.Code, users)
+				}
+				return
+			}
+			if registered.Code != http.StatusOK || users != 1 {
+				t.Fatalf("flag on: register=%d body=%s users=%d", registered.Code, registered.Body.String(), users)
+			}
+		})
+	}
+}
+
+func ptr(s string) *string { return &s }

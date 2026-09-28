@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"os"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/kwhitestone/prism-fusion/addons/auth/service"
@@ -84,6 +85,17 @@ type RegisterOutput struct {
 	Body struct {
 		Code    int    `json:"code" example:"0" doc:"状态码"`
 		Message string `json:"message" example:"success" doc:"响应消息"`
+	}
+}
+
+// RegistrationStatusOutput is the public registration-flag probe.
+type RegistrationStatusOutput struct {
+	Body struct {
+		Code    int    `json:"code" example:"0"`
+		Message string `json:"message" example:"success"`
+		Data    struct {
+			Enabled bool `json:"enabled" doc:"AUTH_ALLOW_LOCAL_REGISTRATION"`
+		} `json:"data"`
 	}
 }
 
@@ -197,32 +209,25 @@ func RegisterRoutes(api huma.API) {
 		return resp, nil
 	})
 
-	// 注册
+	// Public: the login page reads this before any session exists.
 	huma.Register(api, huma.Operation{
-		OperationID: "authRegister",
-		Method:      http.MethodPost,
-		Path:        "/api/v1/addons/auth/register",
-		Summary:     "用户注册",
-		Description: "注册新用户",
+		OperationID: "authRegistrationStatus",
+		Method:      http.MethodGet,
+		Path:        "/api/v1/addons/auth/registration-status",
+		Summary:     "本地注册是否开放",
 		Tags:        []string{"Auth"},
-	}, func(ctx context.Context, input *RegisterInput) (*RegisterOutput, error) {
-		nickName := input.Body.NickName
-		if nickName == "" {
-			nickName = input.Body.Username
-		}
-		_, err := userService.Register(input.Body.Username, input.Body.Password, nickName, 1)
-		if errors.Is(err, service.ErrInvalidUserInput) {
-			return nil, huma.NewError(http.StatusBadRequest, "注册信息无效")
-		} else if errors.Is(err, service.ErrUsernameExists) {
-			return nil, huma.NewError(http.StatusConflict, "用户名已存在")
-		} else if err != nil {
-			return nil, huma.NewError(http.StatusInternalServerError, "注册服务暂时不可用")
-		}
-		resp := &RegisterOutput{}
-		resp.Body.Code = 0
-		resp.Body.Message = "注册成功"
+	}, func(ctx context.Context, _ *struct{}) (*RegistrationStatusOutput, error) {
+		resp := &RegistrationStatusOutput{}
+		resp.Body.Message = "success"
+		resp.Body.Data.Enabled = LocalRegistrationEnabled()
 		return resp, nil
 	})
+
+	// Flag off: the route does not exist, so every request (valid body or not)
+	// gets the router's 404 before any validation or handler runs.
+	if LocalRegistrationEnabled() {
+		registerLocalRegistration(api)
+	}
 
 	RegisterSessionRoutes(api)
 
@@ -250,6 +255,45 @@ func RegisterRoutes(api huma.API) {
 		return resp, nil
 	})
 
+	registerUserInfo(api)
+}
+
+// LocalRegistrationEnabled reports AUTH_ALLOW_LOCAL_REGISTRATION. Default off;
+// only the exact value "true" enables it (same rule as
+// AUTH_PORTAL_CREDENTIAL_HANDOFF).
+func LocalRegistrationEnabled() bool {
+	return os.Getenv("AUTH_ALLOW_LOCAL_REGISTRATION") == "true"
+}
+
+func registerLocalRegistration(api huma.API) {
+	huma.Register(api, huma.Operation{
+		OperationID: "authRegister",
+		Method:      http.MethodPost,
+		Path:        "/api/v1/addons/auth/register",
+		Summary:     "用户注册",
+		Description: "注册新用户",
+		Tags:        []string{"Auth"},
+	}, func(ctx context.Context, input *RegisterInput) (*RegisterOutput, error) {
+		nickName := input.Body.NickName
+		if nickName == "" {
+			nickName = input.Body.Username
+		}
+		_, err := userService.Register(input.Body.Username, input.Body.Password, nickName, 1)
+		if errors.Is(err, service.ErrInvalidUserInput) {
+			return nil, huma.NewError(http.StatusBadRequest, "注册信息无效")
+		} else if errors.Is(err, service.ErrUsernameExists) {
+			return nil, huma.NewError(http.StatusConflict, "用户名已存在")
+		} else if err != nil {
+			return nil, huma.NewError(http.StatusInternalServerError, "注册服务暂时不可用")
+		}
+		resp := &RegisterOutput{}
+		resp.Body.Code = 0
+		resp.Body.Message = "注册成功"
+		return resp, nil
+	})
+}
+
+func registerUserInfo(api huma.API) {
 	// 获取当前用户信息
 	huma.Register(api, huma.Operation{
 		OperationID: "authGetUserInfo",

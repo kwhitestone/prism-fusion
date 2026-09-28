@@ -29,6 +29,7 @@ func TestAuthPluginDeclaresOnlyItsOwnedEndpointScopes(t *testing.T) {
 		"/api/v1/addons/auth/logout",
 		"/api/v1/addons/auth/refresh-token",
 		"/api/v1/addons/auth/register",
+		"/api/v1/addons/auth/registration-status",
 		"/api/v1/addons/auth/user-info",
 	}
 	if !reflect.DeepEqual(manifest.RouteScopes, want) {
@@ -47,6 +48,9 @@ func TestServeRoutesPreservesRefreshRotation(t *testing.T) {
 		{"default", nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			// Registration has its own default-off flag; enable it so this
+			// test isolates serve-routes.
+			t.Setenv("AUTH_ALLOW_LOCAL_REGISTRATION", "true")
 			db, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "auth.db")), &gorm.Config{})
 			if err != nil {
 				t.Fatal(err)
@@ -84,7 +88,7 @@ func TestServeRoutesPreservesRefreshRotation(t *testing.T) {
 			engine.Use(p.GlobalMiddlewares()...)
 			api := humagin.New(engine, huma.DefaultConfig("Serve routes test", "1.0.0"))
 			p.RegisterRoutes(api)
-			wantRoutes := 5
+			wantRoutes := 6 // login, register, registration-status, refresh, logout, user-info
 			if tc.flag != nil && !*tc.flag {
 				wantRoutes = 1
 			}

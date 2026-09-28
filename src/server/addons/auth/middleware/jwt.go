@@ -16,6 +16,7 @@ import (
 var publicPaths = []string{
 	"/api/v1/addons/auth/login",
 	"/api/v1/addons/auth/register",
+	"/api/v1/addons/auth/registration-status",
 	"/api/v1/addons/auth/refresh-token",
 	"/api/v1/addons/auth/logout",
 	"/api/llm-proxy",     // LLM 代理：用 x-llm-proxy-key 自鉴权（executor S2S）
@@ -46,7 +47,7 @@ func JwtAuthMiddleware() gin.HandlerFunc {
 		path := c.Request.URL.Path
 		if configured := global.PRISM_CONFIG.Auth.ServeRoutes; configured != nil && !*configured {
 			// Also cover credential routes supplied by independently registered addons.
-			for _, endpoint := range []string{"login", "register", "logout", "portal/start", "portal/login"} {
+			for _, endpoint := range []string{"login", "register", "registration-status", "logout", "portal/start", "portal/login"} {
 				if publicPathMatches(path, "/api/v1/addons/auth/"+endpoint) {
 					c.AbortWithStatus(http.StatusNotFound)
 					return

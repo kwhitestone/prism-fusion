@@ -61,6 +61,7 @@ func (p *AuthPlugin) Manifest() plugin.Manifest {
 			"/api/v1/addons/auth/logout",
 			"/api/v1/addons/auth/refresh-token",
 			"/api/v1/addons/auth/register",
+			"/api/v1/addons/auth/registration-status",
 			"/api/v1/addons/auth/user-info",
 		},
 	}

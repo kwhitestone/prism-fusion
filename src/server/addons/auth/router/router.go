@@ -88,14 +88,17 @@ type RegisterOutput struct {
 	}
 }
 
+// RegistrationStatusData is named: Huma rejects two anonymous "data" structs.
+type RegistrationStatusData struct {
+	Enabled bool `json:"enabled" doc:"AUTH_ALLOW_LOCAL_REGISTRATION"`
+}
+
 // RegistrationStatusOutput is the public registration-flag probe.
 type RegistrationStatusOutput struct {
 	Body struct {
-		Code    int    `json:"code" example:"0"`
-		Message string `json:"message" example:"success"`
-		Data    struct {
-			Enabled bool `json:"enabled" doc:"AUTH_ALLOW_LOCAL_REGISTRATION"`
-		} `json:"data"`
+		Code    int                    `json:"code" example:"0"`
+		Message string                 `json:"message" example:"success"`
+		Data    RegistrationStatusData `json:"data"`
 	}
 }
 

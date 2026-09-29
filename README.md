@@ -354,6 +354,24 @@ sqlite:
 
 完整配置见 [config.example.yaml](src/server/config.example.yaml)。
 
+### CORS whitelist（env 驱动）
+
+`cors.whitelist[].allow-origin` 只写占位符，值由各环境的 env 注入，镜像内不含任何环境域名：
+
+| 写法 | 语义 |
+| --- | --- |
+| `'${WEB_FRONTEND_URL}'` | 必填。未设置或为空 → 启动失败，错误列出缺失的键名（不含值） |
+| `'${WEB_OUTER_FRONTEND_URL:-}'` | 可选。为空时移除该条目（该环境没有这个前端） |
+| `'${WEB_FRONTEND_URL:-http://localhost:3188}'` | 带默认值，本地开发用 |
+
+展开结果必须是精确 origin（`scheme://host[:port]`，小写，无路径/通配符/凭据/逗号列表），否则启动失败。
+
+**消费方升级步骤**（升级 prism-fusion pin 之前）：
+
+1. 在服务 `config.yaml` 中，把并非每个环境都有的 slot（`*_OUTER_FRONTEND_URL`、`CORE_WEB_FRONTEND_URL`、`TOOLGATE_FRONTEND_URL` 等）改成 `${X:-}`。不改则在未暂存该键的环境里启动失败。
+2. 对每个目标环境，确认所有必填 `${X}` 键都已暂存，且进程里真的能看到（rollout 前跑 deploy `preflight`）。
+3. 再升级 pin 并 rollout。已暂存全部必填键的环境行为不变。
+
 ### Aligned Refresh Windows
 
 Set both refresh durations to `87600h` (3650 days, approximately ten years)

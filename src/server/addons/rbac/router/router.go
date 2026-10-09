@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	authService "github.com/kwhitestone/prism-fusion/addons/auth/service"
@@ -52,6 +53,7 @@ type RoleView struct {
 	ParentID      uint      `json:"parentId"`
 	DefaultRouter string    `json:"defaultRouter"`
 	DataScope     string    `json:"dataScope"`
+	UserCount     int64     `json:"userCount"`
 	CreatedAt     time.Time `json:"createdAt"`
 	UpdatedAt     time.Time `json:"updatedAt"`
 }
@@ -196,6 +198,7 @@ type UserListInput struct {
 	Page     int    `query:"page" default:"1" minimum:"1"`
 	PageSize int    `query:"pageSize" default:"20" minimum:"1" maximum:"100"`
 	Search   string `query:"search" maxLength:"100"`
+	Roles    string `query:"roles" maxLength:"700" doc:"Comma-separated role codes (union, at most 10); 'none' selects users without a role"`
 }
 
 type UserRolesInput struct {
@@ -281,9 +284,16 @@ func registerRoleRoutes(api huma.API, access *rbacService.AccessService) {
 			if err != nil {
 				return nil, mapError(err)
 			}
+			counts, err := access.RoleUserCounts(ctx)
+			if err != nil {
+				return nil, mapError(err)
+			}
 			out := &RolesOutput{}
 			out.Body.Message = "success"
 			out.Body.Data = roleViews(roles)
+			for i := range out.Body.Data {
+				out.Body.Data[i].UserCount = counts[out.Body.Data[i].RoleID]
+			}
 			return out, nil
 		})
 
@@ -430,7 +440,7 @@ func registerMenuRoutes(api huma.API, access *rbacService.AccessService) {
 func registerUserRoutes(api huma.API, access *rbacService.AccessService) {
 	huma.Register(api, operation("rbacListUsers", http.MethodGet, "/api/v1/addons/rbac/users", "List users"),
 		func(ctx context.Context, input *UserListInput) (*UsersOutput, error) {
-			page, err := access.ListUsers(ctx, input.Page, input.PageSize, input.Search)
+			page, err := access.ListUsers(ctx, input.Page, input.PageSize, input.Search, strings.Split(input.Roles, ",")...)
 			if err != nil {
 				return nil, mapError(err)
 			}

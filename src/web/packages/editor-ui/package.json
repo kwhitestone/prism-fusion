@@ -1,0 +1,13 @@
+{
+  "name": "@prism-fusion/editor-ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "files": ["dist", "PROVENANCE.json"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/editor.js" },
+    "./style.css": "./dist/editor.css"
+  },
+  "sideEffects": ["**/*.css"],
+  "peerDependencies": { "vue": "^3.5.0" }
+}

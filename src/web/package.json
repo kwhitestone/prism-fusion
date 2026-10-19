@@ -11,6 +11,8 @@
     "./public/*": "./public/*"
   },
   "scripts": {
+    "build:editor": "vite build --config packages/editor-ui/vite.config.ts && vue-tsc -p packages/editor-ui/tsconfig.json",
+    "pack:editor": "node packages/editor-ui/scripts/pack.mjs",
     "dev": "NODE_OPTIONS=--max-old-space-size=4096 vite",
     "serve": "pnpm dev",
     "build": "rimraf dist && NODE_OPTIONS=--max-old-space-size=8192 vite build",

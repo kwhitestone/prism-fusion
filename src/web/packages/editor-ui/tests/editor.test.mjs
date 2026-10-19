@@ -14,7 +14,7 @@ test("shared view renders fields and scoped extension slots without a host templ
   }, { bindings: ({ groupId, busy }) => h("span", { "data-binding": groupId }, String(busy)) }) }));
   assert.match(html, /data-editor-view="prism"/);
   assert.match(html, /id="name"/);
-  assert.match(html, /id="readonly"[^>]*readonly/);
+  assert.match(html, /<input\b[^>]*id="readonly"[^>]*\sreadonly(?:\s|=|>)/);
   assert.match(html, /data-binding="basic">false/);
 });
 const node = type => ({ type, props: {}, children: [], parent: null });

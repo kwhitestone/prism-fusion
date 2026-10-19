@@ -350,7 +350,7 @@ func (s *AccessService) GetRolePermissions(ctx context.Context, roleID uint) ([]
 func (s *AccessService) CreateRole(ctx context.Context, actorID uint, code, name, description, requestID string) (*model.Role, error) {
 	code = strings.TrimSpace(code)
 	name = strings.TrimSpace(name)
-	if !roleCodePattern.MatchString(code) || !validText(name, 1, 64) || !validText(description, 0, 255) {
+	if !roleCodePattern.MatchString(code) || code == UnassignedRoleFilter || !validText(name, 1, 64) || !validText(description, 0, 255) {
 		return nil, ErrInvalidInput
 	}
 	role := &model.Role{Code: code, RoleName: name, Description: strings.TrimSpace(description), IsEnabled: true}

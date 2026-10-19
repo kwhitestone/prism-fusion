@@ -33,7 +33,7 @@ function edit(id: number) {
 </script>
 
 <template>
-  <div class="tool-selector">
+  <div class="tool-selector" @focusin.stop>
     <label class="tool-search"><input :value="query" type="search" :aria-label="searchLabel" :placeholder="searchLabel"
       @input="emit('update:query', ($event.target as HTMLInputElement).value)" /></label>
     <label><input :checked="selectedOnly" type="checkbox"

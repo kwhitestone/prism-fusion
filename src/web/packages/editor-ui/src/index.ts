@@ -3,6 +3,8 @@ export { default as EditorFields } from "./EditorFields.vue";
 export { default as EditField } from "./EditField.vue";
 export { default as EditSidebar } from "./EditSidebar.vue";
 export { default as DiscardDialog } from "./DiscardDialog.vue";
+export { default as ToolBindings } from "./ToolBindings.vue";
+export type { BindingToolRow } from "./ToolBindings.vue";
 export type { EditorField } from "./EditorFields.vue";
 export type { EditorGroup } from "./EditorView.vue";
 export type { Choice } from "./EditField.vue";

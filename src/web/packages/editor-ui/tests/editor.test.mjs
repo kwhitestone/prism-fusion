@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createSSRApp, createRenderer, h, nextTick, ref } from "vue";
 import { renderToString } from "vue/server-renderer";
-import { EditorView } from "../dist/editor.js";
+import { EditorView, ToolBindings } from "../dist/editor.js";
 
 const groups = [{ id: "basic", label: "Basic", fields: [
   { path: "/name", id: "name", label: "Name", modelValue: "Synthetic", editable: true },
@@ -27,6 +27,34 @@ const renderer = createRenderer({
   parentNode: n => n.parent, nextSibling: () => null,
 });
 const walk = n => [n, ...n.children.flatMap(walk)];
+test("binding rows retain cross-page IDs and enforce selection and management gates", async () => {
+  const editable = ref(true), manageable = ref(true), toggles = [], edits = [], root = node("root");
+  const app = renderer.createApp({ render: () => h(ToolBindings, {
+    rows: [{ id: 47, name: "Third page tool", missing: false, covered: false },
+      { id: 48, name: "Covered", missing: false, covered: true }],
+    selected: [2, 47], unavailable: [2], editable: editable.value, manageable: manageable.value,
+    query: "", selectedOnly: false, searchLabel: "Search", selectedLabel: "Selected", editLabel: "Edit",
+    coveredLabel: "Covered", unavailableLabel: "Unavailable",
+    onToggle: (...args) => toggles.push(args), onEdit: id => edits.push(id),
+  }) });
+  app.mount(root);
+  try {
+    const checks = () => walk(root).filter(n => n.type === "input" && n.props.type === "checkbox");
+    assert.equal(checks()[1].props.checked, true);
+    checks()[1].props.onChange({ target: { checked: false } });
+    checks()[2].props.onChange({ target: { checked: true } });
+    assert.deepEqual(toggles, [[47, false]]);
+    const button = walk(root).find(n => n.type === "button");
+    button.props.onClick();
+    assert.deepEqual(edits, [47]);
+    editable.value = false; manageable.value = false; await nextTick();
+    checks()[1].props.onChange({ target: { checked: true } });
+    button.props.onClick();
+    assert.deepEqual(toggles, [[47, false]]);
+    assert.deepEqual(edits, [47]);
+    assert.equal(walk(root).some(n => n.type === "button"), false);
+  } finally { app.unmount(); }
+});
 test("readonly and busy events cannot escape the shared view", async () => {
   const busy = ref(false), changes = [], root = node("root");
   const app = renderer.createApp({ render: () => h(EditorView, {

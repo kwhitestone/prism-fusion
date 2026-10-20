@@ -24,6 +24,8 @@ const emit = defineEmits<{
 const disabled = (row: BindingToolRow) => !props.editable
   || (props.omitCovered && row.covered)
   || ((row.covered || row.missing || props.selected.length >= 50) && !props.selected.includes(row.id));
+// A usable tool a selected skill brings shows ticked (derived from the skills, never written as a pick); an unavailable one stays unticked.
+const checked = (row: BindingToolRow) => (props.selected.includes(row.id) && !(props.omitCovered && row.covered)) || (row.covered && !row.missing);
 function toggle(row: BindingToolRow, event: Event) {
   if (!disabled(row)) emit("toggle", row.id, (event.target as HTMLInputElement).checked);
 }
@@ -41,7 +43,7 @@ function edit(id: number) {
     <ul class="tool-bindings">
       <li v-for="row in rows" :key="row.id">
         <label>
-          <input type="checkbox" :checked="selected.includes(row.id) && !(omitCovered && row.covered)"
+          <input type="checkbox" :checked="checked(row)"
             :disabled="disabled(row)" @change="toggle(row, $event)" />
           <span>{{ row.name }} <small v-if="row.missing">{{ unavailableLabel }}</small><small v-else-if="row.covered">{{ coveredLabel }}</small></span>
         </label>

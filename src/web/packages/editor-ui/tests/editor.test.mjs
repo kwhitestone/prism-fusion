@@ -71,3 +71,24 @@ test("readonly and busy events cannot escape the shared view", async () => {
     assert.equal(changes.length, 1);
   } finally { app.unmount(); }
 });
+test("a tool brought by a selected skill shows ticked and locked; a manual pick survives the skill going away", async () => {
+  const rows = ref([{ id: 1, name: "Skill tool", missing: false, covered: true }, { id: 2, name: "Picked", missing: false, covered: true },
+    { id: 3, name: "Free", missing: false, covered: false }, { id: 4, name: "Held", missing: true, covered: true }, { id: 5, name: "Held pick", missing: true, covered: true }]);
+  const omit = ref(false), toggles = [], root = node("root");
+  const app = renderer.createApp({ render: () => h(ToolBindings, {
+    rows: rows.value, selected: [2, 5], unavailable: [], editable: true, omitCovered: omit.value,
+    query: "", selectedOnly: false, searchLabel: "Search", selectedLabel: "Selected", editLabel: "Edit",
+    coveredLabel: "Covered", unavailableLabel: "Unavailable", onToggle: (...args) => toggles.push(args),
+  }) });
+  app.mount(root);
+  try {
+    const checks = () => walk(root).filter(n => n.type === "input" && n.props.type === "checkbox").slice(1);
+    assert.deepEqual(checks().map(c => [c.props.checked, c.props.disabled]), [[true, true], [true, false], [false, false], [false, true], [true, false]]);
+    checks()[0].props.onChange({ target: { checked: false } });
+    assert.deepEqual(toggles, []);
+    omit.value = true; await nextTick();
+    assert.deepEqual(checks().map(c => [c.props.checked, c.props.disabled]), [[true, true], [true, true], [false, false], [false, true], [false, true]]);
+    rows.value = rows.value.map(r => ({ ...r, covered: false })); omit.value = false; await nextTick();
+    assert.deepEqual(checks().map(c => c.props.checked), [false, true, false, false, true]);
+  } finally { app.unmount(); }
+});
